@@ -23,13 +23,20 @@ ansible_install_oldschool() {
   sudo apt-get install -y ansible=2.9.*
 }
 
+ansible_install_yum() {
+  sudo yum -y install epel-repo
+  sudo yum -y install epel-release
+  sudo yum -y update
+  sudo yum -y install ansible
+}
+
 cd "$(dirname "$0")"
 distro_name=$(lsb_release -i | cut -f2)
 distro_version=$(lsb_release -r | cut -f2)
 
 echo "Installing Ansible software to deploy aPuppet .."
 
-echo "Detected distro name=\"${distro_name}\" and version=\"${distro_version}\""
+echo "Checking if we're using Ubuntu: name=\"${distro_name}\" and version=\"${distro_version}\""
 case ${distro_name} in
 "Ubuntu")
 
@@ -50,8 +57,15 @@ case ${distro_name} in
   ;;
 
 *)
-  echo "Only Ubuntu is available. If you need to install on another distro please contact aPuppet maintainer."
-  exit 1
+  # Check if yum exists
+  yum --version > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo "Yum package manager detected, installing using Yum"
+    ansible_install_yum
+  else
+    echo "Could not install aPuppet on your distro. Please contact aPuppet maintainer."
+    exit 1
+  fi
   ;;
 esac
 

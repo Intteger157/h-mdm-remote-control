@@ -43,7 +43,7 @@
           "true") eff_arg="--eff-email" ;;
           "false") eff_arg="--no-eff-email" ;;
         esac
-
+        export PATH=$PATH:/usr/local/bin
         docker-compose -f ./../docker-compose.yaml run --rm --entrypoint "\
           certbot certonly -n --webroot -w /var/www/certbot \
             --email {{ email }} \
