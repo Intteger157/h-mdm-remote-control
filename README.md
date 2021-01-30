@@ -219,7 +219,7 @@ aPuppet uses the following incoming ports which should be allowed on your firewa
 - **443/TCP** - used by nginx to display the web UI
 - **8989/TCP** - WSS protocol used by WebRTC to play the video
 - **8089/TCP** - used by the web application to communicate with Janus server (REST API)
-- ** */UDP** - UDP ports are used for the RTP screencast (the port is chosen dynamically by Janus).
+- **\*/UDP** - UDP ports are used for the RTP screencast (the port is chosen dynamically by Janus).
 
 *Notice: aPuppet requires enabling all incoming and outgoing UDP traffic, especially if you're behind a NAT.*
 
