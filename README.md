@@ -26,22 +26,26 @@ Minimal software requirements:
 Other requirements:
 
 - CPU architecture `x84_64` / `amd64`
-- Ubuntu Linux, available options are:
+- Linux, available options are:
     - Ubuntu Focal `20.04 LTS`
 	- Ubuntu Bionic `18.04 LTS` 
 	- Ubuntu Xenial `16.04 LTS`
+    - CentOS 8
 - `bash` command interpreter
 
-The software has been tested on the DigitalOcean hosting (minimal $5 Droplet). The following Ubuntu versions have been tested:
+The software has been tested on the DigitalOcean hosting (minimal $5 Droplet). The following Linux versions have been tested:
 
 - Ubuntu Focal 20.04 LTS x64
 - Ubuntu Bionic 18.04.3 LTS x64
 - Ubuntu Xenial 16.04.6 LTS x64
+- CentOS 8 x64
 
 The web application for remote control (web-admin) has been tested and found to be fully functional in the following browsers:
 - Chrome 86+
 - Firefox 83+
 - Opera 72+
+- Safari 11+
+- Edge 79+
 
 
 ## Deployment
@@ -215,7 +219,7 @@ aPuppet uses the following incoming ports which should be allowed on your firewa
 - **443/TCP** - used by nginx to display the web UI
 - **8989/TCP** - WSS protocol used by WebRTC to play the video
 - **8089/TCP** - used by the web application to communicate with Janus server (REST API)
-- **10000-10500/UDP** - a set of UDP ports for the RTP screencast (the port is chosen dynamically by Janus).
+- ** */UDP** - UDP ports are used for the RTP screencast (the port is chosen dynamically by Janus).
 
 *Notice: aPuppet requires enabling all incoming and outgoing UDP traffic, especially if you're behind a NAT.*
 
