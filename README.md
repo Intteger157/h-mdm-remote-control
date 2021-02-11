@@ -354,3 +354,10 @@ If you need to modify the source code of the web admin application, modify the `
 
 Notice: `./install.sh` will also apply changes but it is executed much slower.
 
+By default, the JavaScript and CSS code is minified. To debug the JavaScript application by using, for example, Chrome developer tools, open `web-admin/gulpfile.js`, find and comment the following line:
+
+    .pipe(terser())
+
+This will turn off the minification, so when you open `app.min.js` in the developer tools, you will get just a debuggable JavaScript code. 
+
+
