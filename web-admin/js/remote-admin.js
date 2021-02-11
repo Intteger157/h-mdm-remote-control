@@ -41,7 +41,9 @@ $(document).ready(function () {
     // Cheat codes on page :)
     window.cheatCodes = new CheatCodes();
 
-	var remoteKeyboard = new RemoteKeyboard(remoteChat);
+    var remoteKeyboard = new RemoteKeyboard(remoteChat);
+
+    var remoteClipboard = new RemoteClipboard(remoteChat);
 
     // Debug stuff
     console.debug('actual Janus servers:', janusServers);

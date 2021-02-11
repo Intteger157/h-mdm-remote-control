@@ -10,6 +10,10 @@ function Commands(remoteChat, remoteVideo){
     this.commands.set('pong', function(timestamp){
         ui.emit('SessionMonitoring.onPong', timestamp);
     });
+    this.commands.set('copy', function(value){
+        ui.emit('RemoteClipboard.onRemoteCopy', value.replace('%2C', ',').replace('%25', '%'));
+    });
+
 
     this.process = function(message){
         let ret = undefined;

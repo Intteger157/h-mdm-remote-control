@@ -50,6 +50,7 @@ gulp.task('scripts', function(){
         'js/debug-utils.js',
         'js/cheat-codes.js',
         'js/keyboard.js',
+        'js/clipboard.js',
         'js/session-monitoring.js',
         'js/ui.js',
         'js/remote-chat.js',
