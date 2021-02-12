@@ -15,7 +15,7 @@ function SessionMonitoring(remoteChat){
             self.pingInterval = window.setInterval(function () {
                 var currentTimestamp = new Date().getTime();
                 if (self.lastPingSentFrom){
-                    if (self.lastPongReceivedFrom + self.pingIntervalDelayMillis*1.5 < currentTimestamp) {
+                    if (self.lastPongReceivedFrom + self.pingIntervalDelayMillis*2 < currentTimestamp) {
                         ui.showWarning(`Network problems`, 'Device management', null, null, self.pingIntervalDelayMillis);
                     }
                     if (self.lastPongReceivedFrom + self.criticalDelay < currentTimestamp){

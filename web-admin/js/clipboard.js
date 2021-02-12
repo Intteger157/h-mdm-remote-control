@@ -25,6 +25,7 @@ function RemoteClipboard(remoteChat){
         textareaClipboard.val(value);
         textareaClipboard.select();
         document.execCommand('copy');
+	ui.showSuccess('Device clipboard is sent to the host', 'Clipboard', null, null, 2000);
     }, this);
 
     $("#textareaClipboard").bind("paste", function(e) {
@@ -32,6 +33,7 @@ function RemoteClipboard(remoteChat){
             var pastedData = e.originalEvent.clipboardData.getData('text');
             var encodedClipboard = pastedData.replace('%', '%25').replace(',', '%2C');
 	    obj.remoteChat.sendData(`paste,${encodedClipboard}`);
+            ui.showSuccess('Clipboard is sent to the device', 'Clipboard', null, null, 2000);
         }
     });
 
