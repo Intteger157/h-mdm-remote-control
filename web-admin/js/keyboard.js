@@ -12,10 +12,14 @@ function RemoteKeyboard(remoteChat){
     }, this);
 
     $(document).on('keydown', function(e){
-        if (!obj.manage || e.altKey || e.ctrlKey || !(e.key.length == 1 || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Enter')) {
+        if (!obj.manage || e.altKey || e.ctrlKey || 
+            !(e.key.length == 1 || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Enter' ||
+              e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End')) {
             return;
         }
         var encodedKey = e.key.replace('%', '%25').replace(',', '%2C');
         obj.remoteChat.sendData(`key,${encodedKey}`);
+	e.preventDefault();
+        e.stopPropagation();
     });
 }
