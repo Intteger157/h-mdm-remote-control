@@ -25,7 +25,7 @@ ansible_install_oldschool() {
 
 ansible_install_debian() {
   sudo apt-get -y update
-  sudo apt-get install -y software-properties-common gnupg
+  sudo apt-get install -y software-properties-common gnupg dirmngr
   sudo apt-add-repository 'deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main'
   sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
   sudo apt-get update
