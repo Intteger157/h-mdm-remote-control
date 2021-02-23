@@ -40,9 +40,9 @@
         # fix for python 3.5
         - jsonschema==3.0.2
 
-  - name: Install Docker on Ubuntu
+  - name: Install Docker on Ubuntu/Debian
     import_tasks: tasks_docker_ubuntu.yaml
-    when: ansible_distribution == 'Ubuntu' 
+    when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian' 
 
   - name: Install Docker on CentOS
     import_tasks: tasks_docker_centos.yaml
@@ -51,7 +51,7 @@
   - name: Warning about manual Docker installation
     debug:
       msg: "I do not know now to install Docker on your OS! Please install docker manually."
-    when: ansible_distribution != 'Ubuntu' and ansible_distribution != 'CentOS'
+    when: ansible_distribution != 'Ubuntu' and ansible_distribution != 'Debian' and ansible_distribution != 'CentOS'
 
   - name: Ensure Docker is started and enabled at boot
     service:

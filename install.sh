@@ -23,6 +23,15 @@ ansible_install_oldschool() {
   sudo apt-get install -y ansible=2.9.*
 }
 
+ansible_install_debian() {
+  sudo apt-get -y update
+  sudo apt-get install -y software-properties-common gnupg
+  sudo apt-add-repository 'deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main'
+  sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
+  sudo apt-get update
+  sudo apt-get install -y ansible=2.9.*
+}
+
 ansible_install_yum() {
   sudo yum -y install epel-repo
   sudo yum -y install epel-release
@@ -54,6 +63,11 @@ case ${distro_name} in
     exit 1
     ;;
   esac
+  ;;
+
+"Debian")
+  echo "OK, start installing on ${distro_name} ${distro_version} .."
+  ansible_install_debian
   ;;
 
 *)
