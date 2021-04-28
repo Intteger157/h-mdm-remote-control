@@ -9,7 +9,9 @@ http {
 {% if ssl_enabled %}
     server {
         listen {{ web_http_port}};
-        listen [::]:{{ web_http_port }};
+# IPv6 is not used so comment it by now
+# This will prevent faults on hosts where IPv6 is not available
+#        listen [::]:{{ web_http_port }};
         server_name .{{ hostname }};
 
         # LetsEncrypt ACME challenge path
@@ -28,10 +30,10 @@ http {
     server {
 {% if ssl_enabled %}
         listen {{ web_https_port }} ssl http2;
-        listen [::]:{{ web_https_port }} ssl http2;
+#        listen [::]:{{ web_https_port }} ssl http2;
 {% else %}
         listen {{ web_http_port}};
-        listen [::]:{{ web_http_port }};
+#        listen [::]:{{ web_http_port }};
 {% endif %}
         server_name .{{ hostname }};
 {% if ssl_enabled %}

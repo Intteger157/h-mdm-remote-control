@@ -8,7 +8,9 @@ events {
 http {
     server {
         listen 80;
-        listen [::]:80;
+# IPv6 is not used so comment it by now
+# This will prevent faults on hosts where IPv6 is not available
+#        listen [::]:80;
         server_name .{{ hostname }};
 
         # LetsEncrypt ACME challenge path
