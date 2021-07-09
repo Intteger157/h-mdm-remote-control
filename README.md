@@ -360,4 +360,19 @@ By default, the JavaScript and CSS code is minified. To debug the JavaScript app
 
 This will turn off the minification, so when you open `app.min.js` in the developer tools, you will get just a debuggable JavaScript code. 
 
+### Certificate renewal
 
+LetsEncrypt certificates should be renewed each 3 months.
+
+To renew certificates, run the commands:
+
+    ansible-playbook deploy/pre_certbot.yaml
+    ansible-playbook deploy/start.yaml
+
+The first command stops the service and renews the certificates. The second command starts aPuppet with new certificates.
+
+It is recommended to add these commands to a single script (apuppet-cert-renewal.sh) and add this script to crontab (weekly run at non-peak time):
+
+    0 4 * * 1 /root/hmdm-server/apuppet-cert-renewal.sh
+
+This crontab command runs the script weekly each Monday at 4 am.
