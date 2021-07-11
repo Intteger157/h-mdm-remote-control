@@ -11,6 +11,15 @@ cleanup() {
 }
 trap "cleanup" EXIT
 
+ansible_2_9_install_deb() {
+  sudo apt-get -y update
+  DEB_FILE=/tmp/ansible_2.9.16.deb
+  if [ ! -f $DEB_FILE ]; then
+    wget http://launchpadlibrarian.net/516153033/ansible_2.9.16+dfsg-1.1_all.deb -O $DEB_FILE
+  fi
+  sudo apt install -y $DEB_FILE
+}
+
 ansible_install_newstyle() {
   sudo apt-get -y update
   sudo apt-get install -y ansible=2.9.*
@@ -58,8 +67,12 @@ case ${distro_name} in
     echo "OK, start installing on actual LTS ${distro_name} ${distro_version} .."
     ansible_install_newstyle
     ;;
+  "21.04")
+    echo "OK, start installing Ansible from .deb on ${distro_name} ${distro_version} .."
+    ansible_2_9_install_deb
+    ;;
   *)
-    echo "Could not install aPuppet on your Ubuntu version: $distro_version. We support only LTS Ubuntu versions: 16.04.*, 18.04.*, 20.04.*"
+    echo "Could not install aPuppet on your Ubuntu version: $distro_version. We support only LTS Ubuntu versions: 16.04, 18.04, 20.04, 21.04"
     exit 1
     ;;
   esac
