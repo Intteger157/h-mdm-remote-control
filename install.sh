@@ -52,7 +52,7 @@ cd "$(dirname "$0")"
 distro_name=$(lsb_release -i | cut -f2)
 distro_version=$(lsb_release -r | cut -f2)
 
-echo "Installing Ansible software to deploy aPuppet .."
+echo "Installing Ansible software to deploy Headwind Remote .."
 
 echo "Checking if we're using Ubuntu: name=\"${distro_name}\" and version=\"${distro_version}\""
 case ${distro_name} in
@@ -72,7 +72,7 @@ case ${distro_name} in
     ansible_2_9_install_deb
     ;;
   *)
-    echo "Could not install aPuppet on your Ubuntu version: $distro_version. We support only LTS Ubuntu versions: 16.04, 18.04, 20.04, 21.04"
+    echo "Could not install Headwind Remote on your Ubuntu version: $distro_version. We support only LTS Ubuntu versions: 16.04, 18.04, 20.04, 21.04"
     exit 1
     ;;
   esac
@@ -90,20 +90,20 @@ case ${distro_name} in
     echo "Yum package manager detected, installing using Yum"
     ansible_install_yum
   else
-    echo "Could not install aPuppet on your distro. Please contact aPuppet maintainer."
+    echo "Could not install Headwind Remote on your distro. Please contact us at https://headwind-remote.com."
     exit 1
   fi
   ;;
 esac
 
-echo "Start deploy aPuppet .."
+echo "Start deploying Headwind Remote .."
 sudo ansible-playbook deploy/install.yaml
 
-echo "Start aPuppet .."
+echo "Starting Headwind Remote .."
 sudo ansible-playbook deploy/start.yaml
 #
 #janus_api_secret=$(cat ./deploy/dist/credentials/janus_api_secret)
 #
-#echo "To control your mobile devices remotely, install the aPuppet Android agent and use the following server URL and secret:"
-#echo "URL: https://srv.apuppet.org/web-admin/"
+#echo "To control your mobile devices remotely, install the Headwind Remote Android agent and use the following server URL and secret:"
+#echo "URL: https://srv.headwind-remote.com/web-admin/"
 #echo "API Secret: ${janus_api_secret}"

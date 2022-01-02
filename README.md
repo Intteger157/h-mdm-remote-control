@@ -1,8 +1,8 @@
-# aPuppet - the open source remote control software for Android
+# Headwind Remote - the open source remote control software for Android
 
 ## Summary
 
-aPuppet is the open source engine providing remote access to Android-based devices for the purpose of technical support and maintenance. Devices are controlled from a web-based application.
+Headwind Remote is the open source engine providing remote access to Android-based devices for the purpose of technical support and maintenance. Devices are controlled from a web-based application.
 
 The software consists of:
 
@@ -11,11 +11,11 @@ The software consists of:
 - [certbot](https://certbot.eff.org/). Agent managing SSL certificates issued by [LetsEncrypt](https://letsencrypt.org/)
 - web-admin. Web application for the remote control of mobile devices
 
-This project is the server module. The source code of the mobile agent is available at https://github.com/h-mdm/apuppet-android and also on [Google Play](https://play.google.com/store/apps/details?id=com.hmdm.control).
+This project is the server module. The source code of the mobile agent is available at https://github.com/h-mdm/remote-control-android and also on [Google Play](https://play.google.com/store/apps/details?id=com.hmdm.control).
 
 ### Platform requirements
 
-It is recommended to use a cloud instance or a dedicated server for the aPuppet hosting, so the software or port conflicts are avoided.
+It is recommended to use a cloud instance or a dedicated server for the Headwind Remote hosting, so the software or port conflicts are avoided.
 
 Minimal software requirements:
 
@@ -60,43 +60,43 @@ Install git in case it's not installed yet:
 
     sudo apt install -y git
 
-### aPuppet setup
+### Headwind Remote setup
 
 #### Get the source code
 
-Download the source code to the server via `git` from the repository https://github.com/h-mdm/apuppet-server.
+Download the source code to the server via `git` from the repository https://github.com/h-mdm/remote-control.
 
-    git clone https://github.com/h-mdm/apuppet-server.git
+    git clone https://github.com/h-mdm/remote-control.git
 
-Notice: to get the source code of the premium version, contact the sales at https://apuppet.org.
+Notice: to get the source code of the premium version, contact the sales at https://headwind-remote.com.
 
 #### Before the installation
 
 Change the directory to the project directory:
 
-    cd apuppet-server
+    cd remote-control
 
-Edit the file `config.yaml` and setup the domain name where aPuppet will be installed and the administrator's email: 
+Edit the file `config.yaml` and setup the domain name where Headwind Remote will be installed and the administrator's email: 
 
     ---
-    hostname: "apuppet.my-company.org"
+    hostname: "hremote.my-company.org"
     email: "administrator@my-company.org"
 
-_Important: aPuppet is designed to work on the dedicated domain. You can use either a domain like `yourdomain.com` or a subdomain of any level. During the installation, the software checks the existence of the domain name entered in `config.yaml` and verifies its ownership (otherwise the setup is aborted). Therefore, you need to create and setup a (sub)domain so it is resolved to an external IP address of your server._
+_Important: Headwind Remote is designed to work on the dedicated domain. You can use either a domain like `yourdomain.com` or a subdomain of any level. During the installation, the software checks the existence of the domain name entered in `config.yaml` and verifies its ownership (otherwise the setup is aborted). Therefore, you need to create and setup a (sub)domain so it is resolved to an external IP address of your server._
 
 #### Installation
 
     sudo ./install.sh
 
-After the successful run of this command, aPuppet will be configured, installed and started.
+After the successful run of this command, Headwind Remote will be configured, installed and started.
 
-You can open the remote control web app (web-admin) using the URL `apuppet.my-company.org/web-admin/`
+You can open the remote control web app (web-admin) using the URL `hremote.my-company.org/web-admin/`
 
 ## Usage
 
-To control the mobile device remotely, you need to install the  [aPuppet](https://play.google.com/store/apps/details?id=com.hmdm.control) application available on Google Play.
+To control the mobile device remotely, you need to install the  [Headwind Remote](https://play.google.com/store/apps/details?id=com.hmdm.control) application available on Google Play.
 
-Notice: you can also get the mobile app source code at [github](https://github.com/h-mdm/apuppet-android) and build your own version.
+Notice: you can also get the mobile app source code at [github](https://github.com/h-mdm/remote-control-android) and build your own version.
 
 At first start, grant the required permissions.
 
@@ -110,7 +110,7 @@ At first start, grant the required permissions.
 ![Permission 2](./docs/images/perm2-apuppet.jpg)
 ![Permission 2](./docs/images/perm2-settings.jpg)
 
-The app on Google play points to the public aPuppet server (srv.apuppet.org) by default. You can change the server URL and secret in the app settings:
+The app on Google play points to the public Headwind Remote server (srv.headwind-remote.com) by default. You can change the server URL and secret in the app settings:
 
 ![Settings Screen](./docs/images/settings.jpg)
 
@@ -127,21 +127,21 @@ Enter these credentials in the `web-admin` application or just open the link pro
 
 ## Custom SSL certificate
 
-To setup the HTTPS connection, aPuppet uses free certificates provided by LetsEncrypt. These certificates are supported by most OS and browsers.
+To setup the HTTPS connection, Headwind Remote uses free certificates provided by LetsEncrypt. These certificates are supported by most OS and browsers.
 
 Note that LetsEncrypt certifies only the domain name ownership and authenticity. It doesn't certify the data about your company. This fact may make LetsEncrypt not appropriate for work with sensitive data, for example in financial or medical areas.
 
-In the Premium version, you can use any HTTPS certificate. Please fill in the contact form at https://apuppet.org for details and how to purchase a premium license.
+In the Premium version, you can use any HTTPS certificate. Please fill in the contact form at https://headwind-remote.com for details and how to purchase a premium license.
 
 ## Updates
 
-In most cases, aPuppet can be updated by renewing the source codes and running `./install.sh`.
+In most cases, Headwind Remote can be updated by renewing the source codes and running `./install.sh`.
 
-    cd apuppet-server
+    cd remote-control
     git pull
     sudo ./install.sh
 
-This will update aPuppet to the latest version.
+This will update Headwind Remote to the latest version.
 
 
 ## Operation details
@@ -150,16 +150,16 @@ This will update aPuppet to the latest version.
 
 Here's what the script `install.sh` does:
 
-- checks the OS type and version. The aPuppet setup is aborted if the OS differs from Ubuntu LTS version 16.04, 18.04, 20.04.
+- checks the OS type and version. The Headwind Remote setup is aborted if the OS differs from Ubuntu LTS version 16.04, 18.04, 20.04.
 - installs the required version of *Ansible*
-- executes the Ansible playbook deploy/install.sh which installs aPuppet and required dependencies
-- executes the Ansible playbook deploy/start.sh which configures and starts aPuppet
+- executes the Ansible playbook deploy/install.sh which installs Headwind Remote and required dependencies
+- executes the Ansible playbook deploy/start.sh which configures and starts Headwind Remote
 
 The script should be started with root privileged or via sudo:
 
     sudo ./install.sh
 
-**Any changes in aPuppet configuration, templates or web-admin source code should be followed by running the install.sh script to reconfigure aPuppet, apply all changes and restart the service!**
+**Any changes in Headwind Remote configuration, templates or web-admin source code should be followed by running the install.sh script to reconfigure Headwind Remote, apply all changes and restart the service!**
 
 #### About Ansible
 
@@ -169,7 +169,7 @@ Ubuntu Focal (20.04 LTS) already has the required version in the repository. Old
 
 You can read more about the Ansible setup in the [official Ansible documentation](https://docs.ansible.com/ansible/2.9/installation_guide/intro_installation.html).
 
-_In the future, official PPA may change the latest version to 2.10.x or above. Since there is a substantial difference between version 2.10 and the required version 2.9.x, the installation may fail. If you will get any issues with the Ansible version, please contact the aPuppet development team at https://apuppet.org._
+_In the future, official PPA may change the latest version to 2.10.x or above. Since there is a substantial difference between version 2.10 and the required version 2.9.x, the installation may fail. If you will get any issues with the Ansible version, please contact the Headwind Remote development team at https://headwind-remote.com._
 
 #### Installed software
 
@@ -179,19 +179,19 @@ To deploy the system and run Ansible playbook, the following software is install
 - Python 2 components: `dnspython`
 - Python 3 components: `docker`, `docker-compose`, `dnspython` 
 
-### aPuppet configuration
+### Headwind Remote configuration
 
-aPuppet includes several configuration files:
+Headwind Remote includes several configuration files:
 
-- `config.yaml`. This is the primary aPuppet configuration. All changes must be done here.
-- `deploy/config.build.yaml`. This is the aPuppet build and deployment configuration. We don't recommend to change anything here because it may break the software compilation.
-- `deploy/config.defaults.yaml`. This is the default aPuppet configuration.
+- `config.yaml`. This is the primary Headwind Remote configuration. All changes must be done here.
+- `deploy/config.build.yaml`. This is the Headwind Remote build and deployment configuration. We don't recommend to change anything here because it may break the software compilation.
+- `deploy/config.defaults.yaml`. This is the default Headwind Remote configuration.
 
 Here's the list of available configuration parameters and their default values:
 - `hostname`. The domain used to accept remote control connections from mobile devices
 - `email`. Administrator's email used to generate a LetsEncrypt certificate and get notifications from [LetsEncrypt](https://letsencrypt.org/)
-- `nat`. If aPuppet is installed behind NAT you should set this flag: `nat: true`
-- `public_ip`. Public IP is used if aPuppet is behind NAT. By default, it is determined by resolving your hostname via DNS, and can be overridden in config.yaml
+- `nat`. If Headwind Remote is installed behind NAT you should set this flag: `nat: true`
+- `public_ip`. Public IP is used if Headwind Remote is behind NAT. By default, it is determined by resolving your hostname via DNS, and can be overridden in config.yaml
 - Janus
     - `api_http: true`. Allows REST API over the non-encrypted HTTP protocol. Since Nginx proxy uses HTTP, it is recommended to set it to true
     - `api_http_port: 8088`. HTTP port for REST API 
@@ -213,7 +213,7 @@ Here's the list of available configuration parameters and their default values:
 
 ### Firewall configuration
 
-aPuppet uses the following incoming ports which should be allowed on your firewall or forwarded via NAT:
+Headwind Remote uses the following incoming ports which should be allowed on your firewall or forwarded via NAT:
 
 - **80/TCP** - used only by certbot to renew certificates
 - **443/TCP** - used by nginx to display the web UI
@@ -221,21 +221,21 @@ aPuppet uses the following incoming ports which should be allowed on your firewa
 - **8089/TCP** - used by the web application to communicate with Janus server (REST API)
 - **\*/UDP** - UDP ports are used for the RTP screencast (the port is chosen dynamically by Janus).
 
-*Notice: aPuppet requires enabling all incoming and outgoing UDP traffic, especially if you're behind a NAT.*
+*Notice: Headwind Remote requires enabling all incoming and outgoing UDP traffic, especially if you're behind a NAT.*
 
 ### Setup options and use cases
 
-You can install aPuppet with different options.
+You can install Headwind Remote with different options.
 
 #### Janus, Nginx, Certbot
 
-Installation of all components, generation and renewal an SSL certificate required for aPuppet proper work.
+Installation of all components, generation and renewal an SSL certificate required for Headwind Remote proper work.
 
 This is the default option. Set the parameters `is_certbot_enabled` and `is_nginx_enabled` (or comment them) in the main configuration file `config.yaml`.
 
 #### Janus, Nginx
 
-If you have your own SSL certificate, you can use it in aPuppet premium (contact the sales team on https://apuppet.org for details).
+If you have your own SSL certificate, you can use it in Headwind Remote Premium (contact the sales team on https://headwind-remote.com for details).
 
 To setup this option, turn off certbot in the configuration file `config.yaml`:
 
@@ -243,7 +243,7 @@ To setup this option, turn off certbot in the configuration file `config.yaml`:
 
 #### Janus only
 
-In this option, only media server is installed. This option can be used if you already have a website where the aPuppet web application should be embedded.
+In this option, only media server is installed. This option can be used if you already have a website where the Headwind Remote web application should be embedded.
 
 To implement this option, turn off certbot and nginx in `config.yaml`:
 
@@ -252,11 +252,11 @@ To implement this option, turn off certbot and nginx in `config.yaml`:
 
 ### Operation
 
-Before executing commands, change the directory to the one where aPuppet is installed:
+Before executing commands, change the directory to the one where Headwind Remote is installed:
 
-    cd ~/apuppet-server
+    cd ~/remote-control
 
-The system is based on `docker-compose`, therefore you need to use docker-compose commands to start, restart, stop, and other aPuppet management actions.
+The system is based on `docker-compose`, therefore you need to use docker-compose commands to start, restart, stop, and other Headwind Remote management actions.
 
 View the running services and their states:
 
@@ -292,14 +292,14 @@ To disable unauthorized access to your server, two secret codes are generated du
 - `janus_api_secret`. This is a secret code to call API methods by a mobile application. This secret is stored in `./dist/credentials/janus_api_secret`
 - `janus_admin_api_secret`. A secret code to call Admin API methods. This secret is stored in `./dist/credentials/janus_admin_api_secret`
 
-`janus_api_secret` is required for both the web and mobile applications. It is automatically saved in the web application configuration and is displayed on the screen when aPuppet is started. 
+`janus_api_secret` is required for both the web and mobile applications. It is automatically saved in the web application configuration and is displayed on the screen when Headwind Remote is started. 
 
 You need to enter this API secret together with the server URL in the configuration of a mobile application. If you build your own version of the mobile app, you can change the default values in `build.gradle`.
 
 ### Logs
 
 #### Log setup
-The aPuppet logs are written by using a standard docker logging.
+The Headwind Remote logs are written by using a standard docker logging.
 
 Default setup:
 - driver: `json-file`
@@ -316,7 +316,7 @@ _Read more about docker logging in the [official docker logging documentation](h
 
 #### View logs
 
-To view aPuppet logs, use standard docker-compose commands.
+To view Headwind Remote logs, use standard docker-compose commands.
 
 View all logs:
 
@@ -346,7 +346,7 @@ _Read more about logging in [docker](https://docs.docker.com/engine/reference/co
 
 This is a web application for the remote access to the mobile device through a web browser. The app is written in HTML, CSS, and Javascript (WebRTC library is used for displaying the screencast and transferring gestures to a mobile device).
 
-The source code of the web application is stored in the folder `web-admin/`. During the deployment, it is compiled by using gulp: CSS and JS are minified and concatenated. The production files are stored in the folder `deploy/dist/web-admin`. In the same folder, a configuration file `settings.js` is stored, which contains the aPuppet settings (paths, ports, secrets).
+The source code of the web application is stored in the folder `web-admin/`. During the deployment, it is compiled by using gulp: CSS and JS are minified and concatenated. The production files are stored in the folder `deploy/dist/web-admin`. In the same folder, a configuration file `settings.js` is stored, which contains the Headwind Remote settings (paths, ports, secrets).
 
 If you need to modify the source code of the web admin application, modify the `web-admin` folder and run the following command to apply your changes:
 
@@ -369,10 +369,10 @@ To renew certificates, run the commands:
     ansible-playbook deploy/pre_certbot.yaml
     ansible-playbook deploy/start.yaml
 
-The first command stops the service and renews the certificates. The second command starts aPuppet with new certificates.
+The first command stops the service and renews the certificates. The second command starts Headwind Remote with new certificates.
 
-It is recommended to add these commands to a single script (apuppet-cert-renewal.sh) and add this script to crontab (weekly run at non-peak time):
+It is recommended to add these commands to a single script (hremote-cert-renewal.sh) and add this script to crontab (weekly run at non-peak time):
 
-    0 4 * * 1 /root/hmdm-server/apuppet-cert-renewal.sh
+    0 4 * * 1 /root/hmdm-server/hremote-cert-renewal.sh
 
 This crontab command runs the script weekly each Monday at 4 am.

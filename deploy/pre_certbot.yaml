@@ -15,7 +15,7 @@
     - name: Check settings
       import_tasks: tasks_check_settings.yaml
 
-    - name: Ensure aPuppet is not running
+    - name: Ensure Headwind Remote is not running
       docker_compose:
         project_src: ../
         state: absent

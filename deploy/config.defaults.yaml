@@ -31,9 +31,9 @@ is_certbot_enabled: true
 share_email: true
 
 ## Networking
-# Public IP is used if aPuppet is behind NAT. By default it determined by resolving your hostname via DNS, you could change it in config.yaml
+# Public IP is used if Headwind Remote is behind NAT. By default it determined by resolving your hostname via DNS, you could change it in config.yaml
 public_ip: ""
-# If aPuppet is installed behind NAT you should enable this flag in config.yaml
+# If Headwind Remote is installed behind NAT you should enable this flag in config.yaml
 nat: false
 
 ## Misc

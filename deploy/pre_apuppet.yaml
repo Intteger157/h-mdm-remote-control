@@ -1,6 +1,6 @@
 ---
 
-- name: Prepare aPuppet
+- name: Prepare Headwind Remote
   hosts: localhost
   connection: local
   vars_files:
