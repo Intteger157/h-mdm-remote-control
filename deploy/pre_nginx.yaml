@@ -8,23 +8,35 @@
     - config.defaults.yaml
     - ../config.yaml
 
+  vars:
+    is_modern_platform: >-
+      {{ (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version | int >= 22)
+         or (ansible_distribution == 'Debian' and ansible_distribution_major_version | int >= 12) }}
+
   tasks:
-    - import_tasks: tasks_check_settings.yaml
+    - ansible.builtin.import_tasks: tasks_check_settings.yaml
 
     - name: Prepare Diffie-Hellman parameters file
       block:
-        - name: Check that the Diffie-Hellman parameters file is exists
-          stat:
+        - name: Check that the Diffie-Hellman parameters file exists
+          ansible.builtin.stat:
             path: ./dist/conf/nginx/dhparams.pem
           register: dhparams_stat_result
 
         - name: Generate Diffie-Hellman parameters file with 2048 bits size. IT MAY TAKE A LONG TIME!
-          # https://docs.ansible.com/ansible/2.9/modules/openssl_dhparam_module.html
+          community.crypto.openssl_dhparam:
+            path: ./dist/conf/nginx/dhparams.pem
+            size: 2048
+            state: present
+          when:
+            - not dhparams_stat_result.stat.exists
+            - is_modern_platform | bool
+
+        - name: Generate Diffie-Hellman parameters file with 2048 bits size (legacy). IT MAY TAKE A LONG TIME!
           openssl_dhparam:
             path: ./dist/conf/nginx/dhparams.pem
             size: 2048
             state: present
-            #owner:
-            #group:
-            #mode:
-          when: not dhparams_stat_result.stat.exists
+          when:
+            - not dhparams_stat_result.stat.exists
+            - not (is_modern_platform | bool)

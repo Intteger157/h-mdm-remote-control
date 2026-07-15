@@ -1,5 +1,7 @@
 # Headwind Remote - the open source remote control software for Android
 
+> **This fork:** Ubuntu 22.04 / 24.04 installer updates. See [INSTALL-UBUNTU.md](./INSTALL-UBUNTU.md) for deployment with Headwind MDM `deviceremote` plugin.
+
 ## Summary
 
 Headwind Remote is the open source engine providing remote access to Android-based devices for the purpose of technical support and maintenance. Devices are controlled from a web-based application.
@@ -27,6 +29,8 @@ Other requirements:
 
 - CPU architecture `x84_64` / `amd64`
 - Linux, available options are:
+    - Ubuntu Noble `24.04 LTS` (this fork)
+    - Ubuntu Jammy `22.04 LTS` (this fork)
     - Ubuntu Focal `20.04 LTS`
 	- Ubuntu Bionic `18.04 LTS` 
 	- Ubuntu Xenial `16.04 LTS`
@@ -64,9 +68,14 @@ Install git in case it's not installed yet:
 
 #### Get the source code
 
-Download the source code to the server via `git` from the repository https://github.com/h-mdm/remote-control.
+Download the source code to the server via `git`:
 
-    git clone https://github.com/h-mdm/remote-control.git
+```bash
+git clone https://github.com/Intteger157/h-mdm-remote-control.git
+cd h-mdm-remote-control
+```
+
+Upstream (private): https://github.com/h-mdm/remote-control
 
 Notice: to get the source code of the premium version, contact the sales at https://headwind-remote.com.
 
