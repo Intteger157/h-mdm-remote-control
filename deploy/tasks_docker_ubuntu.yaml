@@ -66,17 +66,17 @@
       register: docker_existing_keyring
       changed_when: false
       failed_when: false
-      when: docker_apt_source_files.matched | length > 0
+      when: docker_apt_source_files.matched | int > 0
 
     - name: Set Docker apt keyring path
       ansible.builtin.set_fact:
         docker_keyring_path: >-
-          {{ docker_existing_keyring.stdout
-             if (docker_apt_source_files.matched | length > 0 and docker_existing_keyring.stdout | length > 0)
+          {{ docker_existing_keyring.stdout | default('')
+             if (docker_apt_source_files.matched | int > 0 and (docker_existing_keyring.stdout | default('') | length > 0))
              else '/etc/apt/keyrings/docker.gpg' }}
 
     - name: Configure Docker CE apt repository
-      when: docker_apt_source_files.matched | length == 0
+      when: docker_apt_source_files.matched | int == 0
       block:
         - name: Ensure apt keyrings directory exists
           ansible.builtin.file:
