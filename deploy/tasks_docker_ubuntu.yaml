@@ -1,11 +1,6 @@
 - name: Install required system packages by apt
   block:
-    - name: Remove conflicting Docker keyring from previous install attempt
-      ansible.builtin.file:
-        path: /etc/apt/keyrings/docker.asc
-        state: absent
-
-    - name: Remove Docker apt sources that reference docker.asc
+    - name: Remove stale Docker apt source referencing docker.asc only
       ansible.builtin.shell: |
         set -euo pipefail
         changed=0
@@ -55,28 +50,17 @@
           - "docker*"
       register: docker_apt_source_files
 
-    - name: Read signed-by keyring from existing Docker apt sources
-      ansible.builtin.shell: |
-        set -euo pipefail
-        grep -rh 'signed-by=' /etc/apt/sources.list.d/docker* 2>/dev/null \
-          | sed -n 's#.*signed-by=\([^] ]*\).*#\1#p' \
-          | head -1
-      args:
-        executable: /bin/bash
-      register: docker_existing_keyring
-      changed_when: false
-      failed_when: false
-      when: docker_apt_source_files.matched | int > 0
-
-    - name: Set Docker apt keyring path
-      ansible.builtin.set_fact:
-        docker_keyring_path: >-
-          {{ docker_existing_keyring.stdout | default('')
-             if (docker_apt_source_files.matched | int > 0 and (docker_existing_keyring.stdout | default('') | length > 0))
-             else '/etc/apt/keyrings/docker.gpg' }}
+    - name: Docker already installed
+      ansible.builtin.debug:
+        msg: "Docker and Compose plugin already present; skipped apt repository setup."
+      when:
+        - docker_cli_check.rc == 0
+        - docker_compose_check.rc == 0
 
     - name: Configure Docker CE apt repository
-      when: docker_apt_source_files.matched | int == 0
+      when:
+        - docker_cli_check.rc != 0 or docker_compose_check.rc != 0
+        - docker_apt_source_files.matched | int == 0
       block:
         - name: Ensure apt keyrings directory exists
           ansible.builtin.file:
@@ -84,15 +68,19 @@
             state: directory
             mode: "0755"
 
-        - name: Add key for docker repository
-          ansible.builtin.get_url:
-            url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
-            dest: "{{ docker_keyring_path }}"
-            mode: "0644"
+        - name: Install Docker GPG key (official method)
+          ansible.builtin.shell: |
+            set -euo pipefail
+            curl -fsSL "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg" \
+              -o /etc/apt/keyrings/docker.asc
+            chmod a+r /etc/apt/keyrings/docker.asc
+          args:
+            creates: /etc/apt/keyrings/docker.asc
+            executable: /bin/bash
 
         - name: Add docker repository
           ansible.builtin.apt_repository:
-            repo: "deb [arch=amd64 signed-by={{ docker_keyring_path }}] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+            repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
             state: present
             filename: docker
             update_cache: yes
@@ -105,12 +93,5 @@
           - containerd.io
           - docker-compose-plugin
         state: present
-        update_cache: "{{ docker_apt_source_files.matched | length == 0 }}"
+        update_cache: false
       when: docker_cli_check.rc != 0 or docker_compose_check.rc != 0
-
-    - name: Docker already installed
-      ansible.builtin.debug:
-        msg: "Docker and Compose plugin already present; skipped repository setup."
-      when:
-        - docker_cli_check.rc == 0
-        - docker_compose_check.rc == 0
