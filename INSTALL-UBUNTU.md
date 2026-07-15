@@ -81,6 +81,8 @@ git pull
 sudo ./install.sh
 ```
 
+**web-admin build timeout** — first build runs `npm install` + gulp and may take up to 20 minutes on slow VPS. Re-run `sudo ./install.sh` if interrupted.
+
 **DNS check fails** — `hostname` in `config.yaml` must resolve to this server's public IP before install.
 
 **Certbot fails on non-443 HTTPS** — Let's Encrypt HTTP-01 still uses port 80. Custom `web_https_port` only affects nginx HTTPS listener.

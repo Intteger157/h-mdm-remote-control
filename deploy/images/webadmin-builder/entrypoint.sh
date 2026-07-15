@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
+set -eu
 
-npm init --yes
-npm install --save-dev gulp gulp-clean gulp-size gulp-concat gulp-clean-css gulp-terser
+cd /app
+npm install --no-audit --no-fund
 mkdir -p dist/
-gulp
+npx gulp

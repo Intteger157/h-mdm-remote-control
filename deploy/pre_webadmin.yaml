@@ -7,35 +7,55 @@
     - config.build.yaml
     - config.defaults.yaml
     - ../config.yaml
+  vars:
+    webadmin_builder_local_image: "headwind-remote-webadmin-builder:local"
+    webadmin_src_dir: "{{ playbook_dir }}/../web-admin"
 
   tasks:
     - name: Prepare Python 3
       ansible.builtin.import_tasks: tasks_python.yaml
 
-    - name: Get builder image for web-admin
-      community.docker.docker_image:
-        name: "{{ node_gulp_builder_image_publisher }}/{{ node_gulp_builder_image_name }}:{{ node_gulp_builder_image_tag }}"
-        source: pull
-
-    - name: Start build web-admin
-      community.docker.docker_container:
-        image: "{{ node_gulp_builder_image_publisher }}/{{ node_gulp_builder_image_name }}:{{ node_gulp_builder_image_tag }}"
-        name: "{{ node_gulp_builder_image_name }}-container"
-        state: started
-        volumes:
-          - ../web-admin:/app
-
-    - name: Waiting until web-admin is ready
-      ansible.builtin.wait_for:
-        path: ../web-admin/dist/js/app.min.js
-        state: present
-        delay: 5
-        timeout: 300
-
-    - name: Remove builder
+    - name: Remove stale web-admin builder container
       community.docker.docker_container:
         name: "{{ node_gulp_builder_image_name }}-container"
         state: absent
+      failed_when: false
+
+    - name: Build local web-admin builder image
+      community.docker.docker_image:
+        name: "{{ webadmin_builder_local_image }}"
+        source: build
+        build:
+          path: "{{ playbook_dir }}/images/webadmin-builder"
+        force_source: true
+
+    - name: Build web-admin assets in Docker
+      ansible.builtin.shell: |
+        set -euo pipefail
+        WEB_ADMIN_SRC="$(cd "{{ webadmin_src_dir }}" && pwd)"
+        docker run --rm \
+          --name "{{ node_gulp_builder_image_name }}-container" \
+          -v "${WEB_ADMIN_SRC}:/app" \
+          -w /app \
+          "{{ webadmin_builder_local_image }}"
+      args:
+        executable: /bin/bash
+      register: webadmin_build
+      async: 1200
+      poll: 15
+
+    - name: Verify web-admin build output
+      ansible.builtin.stat:
+        path: "{{ webadmin_src_dir }}/dist/js/app.min.js"
+      register: webadmin_app_js
+
+    - name: Fail when web-admin build output is missing
+      ansible.builtin.fail:
+        msg: >-
+          web-admin build failed: {{ webadmin_src_dir }}/dist/js/app.min.js was not created.
+          Builder output: {{ webadmin_build.stdout | default('') }}
+          {{ webadmin_build.stderr | default('') }}
+      when: not webadmin_app_js.stat.exists
 
     - name: Release web-admin assets
       ansible.builtin.copy:
