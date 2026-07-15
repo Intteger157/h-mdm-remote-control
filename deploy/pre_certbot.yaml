@@ -54,6 +54,7 @@
             --agree-tos" certbot
       args:
         chdir: "{{ playbook_dir }}"
+        executable: /bin/bash
 
     - name: Stop services
       community.docker.docker_compose_v2:
