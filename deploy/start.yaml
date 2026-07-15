@@ -12,29 +12,17 @@
     - ../config.yaml
   vars:
     compose_project_src: "{{ playbook_dir }}/.."
-    is_modern_platform: >-
-      {{ (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version | int >= 22)
-         or (ansible_distribution == 'Debian' and ansible_distribution_major_version | int >= 12) }}
 
   tasks:
     - name: Set SSL availability
       ansible.builtin.set_fact:
         ssl_enabled: "{% if is_certbot_enabled %}true{% else %}false{% endif %}"
 
-    - name: (Re)Starting Headwind Remote (modern)
+    - name: (Re)Starting Headwind Remote
       community.docker.docker_compose_v2:
         project_src: "{{ compose_project_src }}"
         state: present
         recreate: always
-      when: is_modern_platform | bool
-
-    - name: (Re)Starting Headwind Remote (legacy)
-      docker_compose:
-        project_src: "{{ compose_project_src }}"
-        state: present
-        stopped: no
-        restarted: yes
-      when: not (is_modern_platform | bool)
 
     - name: Welcome!
       ansible.builtin.debug:

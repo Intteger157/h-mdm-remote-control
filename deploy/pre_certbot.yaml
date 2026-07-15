@@ -10,9 +10,6 @@
   vars:
     compose_project_src: "{{ playbook_dir }}/.."
     compose_file: "{{ playbook_dir }}/../docker-compose.yaml"
-    is_modern_platform: >-
-      {{ (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version | int >= 22)
-         or (ansible_distribution == 'Debian' and ansible_distribution_major_version | int >= 12) }}
 
   tasks:
     - name: Prepare Python 3
@@ -21,19 +18,11 @@
     - name: Check settings
       ansible.builtin.import_tasks: tasks_check_settings.yaml
 
-    - name: Ensure Headwind Remote is not running (modern)
+    - name: Ensure Headwind Remote is not running
       community.docker.docker_compose_v2:
         project_src: "{{ compose_project_src }}"
         state: absent
         remove_volumes: true
-      when: is_modern_platform | bool
-
-    - name: Ensure Headwind Remote is not running (legacy)
-      docker_compose:
-        project_src: "{{ compose_project_src }}"
-        state: absent
-        remove_volumes: yes
-      when: not (is_modern_platform | bool)
 
     - name: Process Nginx configuration for ACME challenge
       ansible.builtin.template:
@@ -42,23 +31,14 @@
       with_fileglob:
         - ./templates/nginx-acme/*.j2
 
-    - name: Start Nginx for ACME challenge (modern)
+    - name: Start Nginx for ACME challenge
       community.docker.docker_compose_v2:
         project_src: "{{ compose_project_src }}"
         services:
           - nginx
         state: present
-      when: is_modern_platform | bool
 
-    - name: Start Nginx for ACME challenge (legacy)
-      docker_compose:
-        project_src: "{{ compose_project_src }}"
-        services:
-          - nginx
-        state: present
-      when: not (is_modern_platform | bool)
-
-    - name: Run certbot (modern)
+    - name: Run certbot
       ansible.builtin.shell: |
         set -euo pipefail
         case "{% if share_email %}true{% else %}false{% endif %}" in
@@ -74,37 +54,9 @@
             --agree-tos" certbot
       args:
         chdir: "{{ playbook_dir }}"
-      when: is_modern_platform | bool
 
-    - name: Run certbot (legacy)
-      ansible.builtin.shell: |
-        set -euo pipefail
-        case "{% if share_email %}true{% else %}false{% endif %}" in
-          "true") eff_arg="--eff-email" ;;
-          "false") eff_arg="--no-eff-email" ;;
-        esac
-        export PATH=$PATH:/usr/local/bin
-        docker-compose -f "{{ compose_file }}" run --rm --entrypoint "\
-          certbot certonly -n --webroot -w /var/www/certbot \
-            --email {{ email }} \
-            $eff_arg \
-            -d {{ hostname }} \
-            --rsa-key-size 4096 \
-            --agree-tos" certbot
-      args:
-        chdir: "{{ playbook_dir }}"
-      when: not (is_modern_platform | bool)
-
-    - name: Stop services (modern)
+    - name: Stop services
       community.docker.docker_compose_v2:
         project_src: "{{ compose_project_src }}"
         state: absent
         remove_volumes: true
-      when: is_modern_platform | bool
-
-    - name: Stop services (legacy)
-      docker_compose:
-        project_src: "{{ compose_project_src }}"
-        state: absent
-        remove_volumes: yes
-      when: not (is_modern_platform | bool)

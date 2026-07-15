@@ -12,43 +12,6 @@ cleanup() {
 }
 trap "cleanup" EXIT
 
-ansible_2_9_install_deb() {
-  sudo apt-get -y update
-  DEB_FILE=/tmp/ansible_2.9.16.deb
-  if [ ! -f "$DEB_FILE" ]; then
-    wget http://launchpadlibrarian.net/516153033/ansible_2.9.16+dfsg-1.1_all.deb -O "$DEB_FILE"
-  fi
-  sudo apt install -y "$DEB_FILE"
-}
-
-ansible_install_newstyle() {
-  sudo apt-get -y update
-  sudo apt-get install -y ansible=2.9.*
-}
-
-ansible_install_oldschool() {
-  sudo apt-get -y update
-  sudo apt install -y software-properties-common
-  sudo apt-add-repository --yes --update ppa:ansible/ansible
-  sudo apt-get install -y ansible=2.9.*
-}
-
-ansible_install_debian() {
-  sudo apt-get -y update
-  sudo apt-get install -y software-properties-common gnupg dirmngr
-  sudo apt-add-repository 'deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main'
-  sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
-  sudo apt-get update
-  sudo apt-get install -y ansible=2.9.*
-}
-
-ansible_install_yum() {
-  sudo yum -y install epel-repo
-  sudo yum -y install epel-release
-  sudo yum -y update
-  sudo yum -y install ansible
-}
-
 ansible_install_modern() {
   sudo apt-get -y update
   sudo apt-get install -y \
@@ -83,25 +46,9 @@ case ${distro_name} in
     echo "OK, installing modern Ansible stack on ${distro_name} ${distro_version} .."
     ansible_install_modern
   else
-    case ${distro_version} in
-    "16.04" | "18.04")
-      echo "OK, start installing on old LTS ${distro_name} ${distro_version} .."
-      ansible_install_oldschool
-      ;;
-    "20.04")
-      echo "OK, start installing on LTS ${distro_name} ${distro_version} .."
-      ansible_install_newstyle
-      ;;
-    "21.04")
-      echo "OK, start installing Ansible from .deb on ${distro_name} ${distro_version} .."
-      ansible_2_9_install_deb
-      ;;
-    *)
-      echo "Could not install Headwind Remote on Ubuntu ${distro_version}."
-      echo "Supported: 16.04, 18.04, 20.04, 21.04, 22.04+, 24.04+"
-      exit 1
-      ;;
-    esac
+    echo "ERROR: This installer requires Ubuntu 22.04 or newer."
+    echo "For Ubuntu 20.04 and older, use upstream commit 212335a with Ansible 2.9."
+    exit 1
   fi
   ;;
 
@@ -111,19 +58,16 @@ case ${distro_name} in
     echo "OK, installing modern Ansible stack on ${distro_name} ${distro_version} .."
     ansible_install_modern
   else
-    echo "OK, start installing on ${distro_name} ${distro_version} .."
-    ansible_install_debian
+    echo "ERROR: This installer requires Debian 12 or newer."
+    echo "For older Debian releases, use upstream commit 212335a with Ansible 2.9."
+    exit 1
   fi
   ;;
 
 *)
-  if yum --version > /dev/null 2>&1; then
-    echo "Yum package manager detected, installing using Yum"
-    ansible_install_yum
-  else
-    echo "Could not install Headwind Remote on your distro."
-    exit 1
-  fi
+  echo "ERROR: Unsupported distro ${distro_name} ${distro_version}."
+  echo "Supported: Ubuntu 22.04+, Debian 12+."
+  exit 1
   ;;
 esac
 
