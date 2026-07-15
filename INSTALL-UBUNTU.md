@@ -70,6 +70,17 @@ Legacy Ubuntu 20.04 and older still use the original Ansible 2.9 path.
 
 ## Troubleshooting
 
+**Docker apt conflict (`docker.gpg` vs `docker.asc`)** — usually means Docker was already installed for MDM. The installer now detects this automatically. If apt is still broken, run once:
+
+```bash
+sudo rm -f /etc/apt/keyrings/docker.asc
+sudo rm -f /etc/apt/sources.list.d/docker.list
+# keep the existing docker.sources / docker.gpg if present
+sudo apt update
+git pull
+sudo ./install.sh
+```
+
 **DNS check fails** — `hostname` in `config.yaml` must resolve to this server's public IP before install.
 
 **Certbot fails on non-443 HTTPS** — Let's Encrypt HTTP-01 still uses port 80. Custom `web_https_port` only affects nginx HTTPS listener.
