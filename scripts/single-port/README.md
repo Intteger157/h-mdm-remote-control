@@ -110,5 +110,23 @@ cd /root/hmdm-docker && docker compose up -d
 ## Notes
 
 - SNI passthrough keeps **separate certificates** on each backend; host certbot copies LE files into Docker volumes so backends reload valid certs.
+- **MDM Tomcat** (`headwindmdm/hmdm` docker) uses `hmdm.jks` with `type="RSA"` in server.xml — host certbot must issue **RSA** for `MDM_DOMAIN` (Remote nginx accepts ECDSA PEM).
 - If MDM cert path differs, fix `HMDM_LETSENCRYPT_DIR` before running setup.
 - **Do not** run Remote docker `certbot` service on public `:80` after setup — host certbot owns port 80.
+
+## Troubleshooting
+
+### Remote works, MDM SSL fails on :443
+
+MDM likely got an ECDSA cert from host certbot; Tomcat expects RSA. Re-run:
+
+```bash
+sudo ~/h-mdm-remote-control/scripts/single-port/renew-certificates.sh
+```
+
+The script re-issues MDM cert as RSA and restarts Tomcat. Verify backend:
+
+```bash
+curl -kI https://127.0.0.1:8443/ --resolve mdm.example.com:8443:127.0.0.1
+grep BASE_DOMAIN /root/hmdm-docker/.env   # must be mdm.example.com
+```

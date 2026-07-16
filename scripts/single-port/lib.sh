@@ -129,24 +129,91 @@ sync_mdm_certs_from_le() {
   mkdir -p "$HMDM_LETSENCRYPT_DIR"
   rsync -a /etc/letsencrypt/ "$HMDM_LETSENCRYPT_DIR/"
   if [[ -d "$HMDM_DOCKER_DIR" ]]; then
-    (cd "$HMDM_DOCKER_DIR" && docker compose restart hmdm 2>/dev/null) || true
+    reload_mdm_tomcat_ssl
   fi
   log "Synced host certs -> ${HMDM_LETSENCRYPT_DIR}/"
+}
+
+cert_public_key_type() {
+  local domain="$1"
+  local cert="/etc/letsencrypt/live/${domain}/cert.pem"
+  [[ -f "$cert" ]] || return 1
+  local text
+  text="$(openssl x509 -in "$cert" -noout -text 2>/dev/null)" || return 1
+  if grep -q "EC Public Key" <<< "$text"; then
+    echo "ec"
+  elif grep -q "RSA Public Key" <<< "$text"; then
+    echo "rsa"
+  else
+    echo "unknown"
+  fi
+}
+
+reload_mdm_tomcat_ssl() {
+  local container
+  container="$(cd "$HMDM_DOCKER_DIR" && docker compose ps -q hmdm 2>/dev/null | head -n1)"
+  [[ -n "$container" ]] || {
+    log "WARNING: MDM container not found — restart manually: cd $HMDM_DOCKER_DIR && docker compose restart hmdm"
+    return 0
+  }
+
+  log "Restarting MDM Tomcat to rebuild hmdm.jks ..."
+  (cd "$HMDM_DOCKER_DIR" && docker compose restart hmdm) || die "Failed to restart MDM container"
+
+  local i
+  for i in $(seq 1 30); do
+    if docker exec "$container" test -f /usr/local/tomcat/ssl/hmdm.jks 2>/dev/null; then
+      log "MDM SSL keystore ready"
+      return 0
+    fi
+    sleep 2
+  done
+  log "WARNING: hmdm.jks not found after restart — check: docker compose -f $HMDM_DOCKER_DIR/docker-compose.yaml logs hmdm"
 }
 
 issue_or_renew_cert() {
   local domain="$1"
   local webroot="$2"
+  local key_type="${3:-}"
+  local -a certbot_args=()
+
   mkdir -p "$webroot/.well-known/acme-challenge"
+  [[ -n "$key_type" ]] && certbot_args+=(--key-type "$key_type")
+
   if [[ -d "/etc/letsencrypt/live/${domain}" ]]; then
     log "Certificate directory exists for ${domain}"
     return 0
   fi
-  log "Issuing certificate for ${domain} ..."
+
+  log "Issuing certificate for ${domain}${key_type:+ (${key_type})} ..."
   certbot certonly --webroot -w "$webroot" \
     -d "$domain" \
+    "${certbot_args[@]}" \
     --email "$CERTBOT_EMAIL" \
     --agree-tos --non-interactive --no-eff-email
+}
+
+ensure_mdm_rsa_cert() {
+  local webroot="$1"
+  local cert_dir="/etc/letsencrypt/live/${MDM_DOMAIN}"
+
+  if [[ ! -d "$cert_dir" ]]; then
+    issue_or_renew_cert "$MDM_DOMAIN" "$webroot" rsa
+    return 0
+  fi
+
+  local key_type
+  key_type="$(cert_public_key_type "$MDM_DOMAIN")"
+  if [[ "$key_type" == "ec" ]]; then
+    log "MDM cert is ECDSA but Tomcat docker image expects RSA — re-issuing ${MDM_DOMAIN} ..."
+    certbot certonly --webroot -w "$webroot" \
+      -d "$MDM_DOMAIN" \
+      --key-type rsa --force-renewal \
+      --email "$CERTBOT_EMAIL" \
+      --agree-tos --non-interactive --no-eff-email
+  else
+    log "MDM certificate key type OK (${key_type:-rsa})"
+  fi
 }
 
 ensure_acme_nginx() {
@@ -170,7 +237,7 @@ ensure_acme_nginx() {
 
 ensure_host_certificates() {
   issue_or_renew_cert "$REMOTE_DOMAIN" "$REMOTE_ACME_WEBROOT"
-  issue_or_renew_cert "$MDM_DOMAIN" "$MDM_ACME_WEBROOT"
+  ensure_mdm_rsa_cert "$MDM_ACME_WEBROOT"
 }
 
 renew_all_certs() {

@@ -32,7 +32,7 @@ systemctl restart nginx
 
 log "Requesting / renewing TLS certificates via host certbot (port 80) ..."
 issue_or_renew_cert "$REMOTE_DOMAIN" "$REMOTE_ACME_WEBROOT"
-issue_or_renew_cert "$MDM_DOMAIN" "$MDM_ACME_WEBROOT"
+ensure_mdm_rsa_cert "$MDM_ACME_WEBROOT"
 
 sync_remote_certs_from_le
 sync_mdm_certs_from_le
