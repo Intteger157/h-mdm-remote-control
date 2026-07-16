@@ -127,9 +127,11 @@ sync_mdm_certs_from_le() {
     return 0
   fi
   mkdir -p "$HMDM_LETSENCRYPT_DIR"
-  rsync -a /etc/letsencrypt/ "$HMDM_LETSENCRYPT_DIR/"
+  # -L: copy cert files, not symlinks (Tomcat/openssl inside Docker need real files)
+  rsync -aL /etc/letsencrypt/ "$HMDM_LETSENCRYPT_DIR/"
   if [[ -d "$HMDM_DOCKER_DIR" ]]; then
     reload_mdm_tomcat_ssl
+    verify_mdm_https_backend || true
   fi
   log "Synced host certs -> ${HMDM_LETSENCRYPT_DIR}/"
 }
@@ -190,6 +192,25 @@ reload_mdm_tomcat_ssl() {
     sleep 2
   done
   log "WARNING: hmdm.jks not found after restart — check: docker compose -f $HMDM_DOCKER_DIR/docker-compose.yaml logs hmdm"
+}
+
+verify_mdm_https_backend() {
+  log "Waiting for MDM Tomcat on 127.0.0.1:${MDM_HTTPS_PORT} ..."
+  local i
+  for i in $(seq 1 60); do
+    if curl -kfsS --max-time 3 \
+      "https://127.0.0.1:${MDM_HTTPS_PORT}/" \
+      --resolve "${MDM_DOMAIN}:${MDM_HTTPS_PORT}:127.0.0.1" \
+      -o /dev/null 2>/dev/null; then
+      log "MDM HTTPS backend OK on 127.0.0.1:${MDM_HTTPS_PORT}"
+      return 0
+    fi
+    sleep 3
+  done
+  log "WARNING: MDM not responding on HTTPS :${MDM_HTTPS_PORT} — run:"
+  log "  cd ${HMDM_DOCKER_DIR} && docker compose logs hmdm --tail=80"
+  log "  docker exec \$(docker compose -f ${HMDM_DOCKER_DIR}/docker-compose.yaml ps -q hmdm) ls -la /etc/letsencrypt/live/${MDM_DOMAIN}/"
+  return 1
 }
 
 issue_or_renew_cert() {
