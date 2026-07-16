@@ -52,15 +52,18 @@ Web UI: `https://remote.example.com/web-admin/` (include `:9443` if configured).
 
 ## Same VPS as Headwind MDM (single port 443)
 
-If MDM already uses host port **443**, Remote must use another HTTPS port (e.g. **9443**) **or** you add host nginx SNI routing so both domains work on `:443` without a port in the URL.
-
-See **[deploy/host-nginx/README.md](./deploy/host-nginx/README.md)** for the SNI setup (`remote.example.com` → :9443, `mdm.example.com` → :8443).
-
-Quick test when Remote is on 9443:
+If MDM already uses host port **443**, use the automated script:
 
 ```bash
-curl -kI https://remote.example.com:9443/web-admin/
+cp scripts/single-port/config.env.example scripts/single-port/config.env
+nano scripts/single-port/config.env
+chmod +x scripts/single-port/*.sh
+sudo scripts/single-port/setup-single-port.sh
 ```
+
+See **[scripts/single-port/README.md](../scripts/single-port/README.md)** — SNI on `:443`, unified **certbot** on `:80`, weekly renewal cron.
+
+Manual steps (legacy): **[deploy/host-nginx/README.md](./deploy/host-nginx/README.md)**
 
 ## MDM integration (`deviceremote` plugin)
 
