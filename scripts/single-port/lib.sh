@@ -136,17 +136,38 @@ sync_mdm_certs_from_le() {
 
 cert_public_key_type() {
   local domain="$1"
-  local cert="/etc/letsencrypt/live/${domain}/cert.pem"
-  [[ -f "$cert" ]] || return 1
-  local text
-  text="$(openssl x509 -in "$cert" -noout -text 2>/dev/null)" || return 1
-  if grep -q "EC Public Key" <<< "$text"; then
+  local key="/etc/letsencrypt/live/${domain}/privkey.pem"
+  local certbot_type
+
+  certbot_type="$(certbot certificates 2>/dev/null | awk -v d="$domain" '
+    $0 ~ "Certificate Name: " d { show=1; next }
+    show && /Key Type:/ { print tolower($3); exit }
+  ')"
+
+  case "$certbot_type" in
+    ecdsa|ec) echo "ec"; return 0 ;;
+    rsa) echo "rsa"; return 0 ;;
+  esac
+
+  [[ -f "$key" ]] || return 1
+  if openssl ec -in "$key" -noout 2>/dev/null; then
     echo "ec"
-  elif grep -q "RSA Public Key" <<< "$text"; then
+  elif openssl rsa -in "$key" -noout 2>/dev/null; then
     echo "rsa"
   else
     echo "unknown"
   fi
+}
+
+reissue_mdm_rsa_cert() {
+  local webroot="$1"
+  log "Re-issuing ${MDM_DOMAIN} as RSA (Tomcat hmdm.jks requires RSA) ..."
+  certbot certonly --webroot -w "$webroot" \
+    -d "$MDM_DOMAIN" \
+    --cert-name "$MDM_DOMAIN" \
+    --key-type rsa --force-renewal \
+    --email "$CERTBOT_EMAIL" \
+    --agree-tos --non-interactive --no-eff-email
 }
 
 reload_mdm_tomcat_ssl() {
@@ -195,9 +216,8 @@ issue_or_renew_cert() {
 
 ensure_mdm_rsa_cert() {
   local webroot="$1"
-  local cert_dir="/etc/letsencrypt/live/${MDM_DOMAIN}"
 
-  if [[ ! -d "$cert_dir" ]]; then
+  if [[ ! -d "/etc/letsencrypt/live/${MDM_DOMAIN}" ]]; then
     issue_or_renew_cert "$MDM_DOMAIN" "$webroot" rsa
     return 0
   fi
@@ -205,14 +225,12 @@ ensure_mdm_rsa_cert() {
   local key_type
   key_type="$(cert_public_key_type "$MDM_DOMAIN")"
   if [[ "$key_type" == "ec" ]]; then
-    log "MDM cert is ECDSA but Tomcat docker image expects RSA — re-issuing ${MDM_DOMAIN} ..."
-    certbot certonly --webroot -w "$webroot" \
-      -d "$MDM_DOMAIN" \
-      --key-type rsa --force-renewal \
-      --email "$CERTBOT_EMAIL" \
-      --agree-tos --non-interactive --no-eff-email
+    reissue_mdm_rsa_cert "$webroot"
+  elif [[ "$key_type" == "rsa" ]]; then
+    log "MDM certificate is RSA (OK for Tomcat)"
   else
-    log "MDM certificate key type OK (${key_type:-rsa})"
+    log "WARNING: MDM key type unclear (${key_type}) — attempting RSA re-issue ..."
+    reissue_mdm_rsa_cert "$webroot" || true
   fi
 }
 

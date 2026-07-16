@@ -121,6 +121,12 @@ cd /root/hmdm-docker && docker compose up -d
 MDM likely got an ECDSA cert from host certbot; Tomcat expects RSA. Re-run:
 
 ```bash
+sudo certbot certonly --webroot -w /var/www/letsencrypt/mdm \
+  -d mdm.example.com \
+  --cert-name mdm.example.com \
+  --key-type rsa --force-renewal \
+  --email admin@example.com --agree-tos --non-interactive
+
 sudo ~/h-mdm-remote-control/scripts/single-port/renew-certificates.sh
 ```
 
