@@ -50,6 +50,18 @@ docker compose ps
 
 Web UI: `https://remote.example.com/web-admin/` (include `:9443` if configured).
 
+## Same VPS as Headwind MDM (single port 443)
+
+If MDM already uses host port **443**, Remote must use another HTTPS port (e.g. **9443**) **or** you add host nginx SNI routing so both domains work on `:443` without a port in the URL.
+
+See **[deploy/host-nginx/README.md](./deploy/host-nginx/README.md)** for the SNI setup (`remote.example.com` → :9443, `mdm.example.com` → :8443).
+
+Quick test when Remote is on 9443:
+
+```bash
+curl -kI https://remote.example.com:9443/web-admin/
+```
+
 ## MDM integration (`deviceremote` plugin)
 
 1. **Plugins → Remote control → Settings**
