@@ -45,19 +45,25 @@ Adjust `HMDM_LETSENCRYPT_DIR` if your MDM stores certs elsewhere (`find /root/hm
 
 ## Already configured manually?
 
-If SNI + nginx stream already work, you only need renewal:
+If SNI + nginx stream already work, run renewal once — it will **issue** missing host certs and **renew** existing ones:
 
 ```bash
 cp scripts/single-port/config.env.example scripts/single-port/config.env
 nano scripts/single-port/config.env
 chmod +x scripts/single-port/renew-certificates.sh
 sudo scripts/single-port/renew-certificates.sh   # test once
+sudo certbot certificates   # must list REMOTE_DOMAIN and MDM_DOMAIN
+```
 
-# cron only (from setup):
+Cron (weekly):
+
+```bash
 echo '0 4 * * 1 root /root/h-mdm-remote-control/scripts/single-port/renew-certificates.sh >> /var/log/headwind-cert-renew.log 2>&1' | sudo tee /etc/cron.d/headwind-cert-renew
 ```
 
-Ensure host nginx serves ACME on port 80 for both domains (see `templates/acme-http.conf.template`) and `/etc/letsencrypt/` contains both certificates. If certs exist only in Docker volumes, run `setup-single-port.sh` once to import via certbot or copy manually to `/etc/letsencrypt/` first.
+**Important:** `certbot certificates` on the **host** must show both `REMOTE_DOMAIN` and `MDM_DOMAIN`. If you only see unrelated certs (e.g. `webjson.*`), renewal cannot protect Remote/MDM until host certbot issues them (port 80 ACME). The script installs `headwind-acme.conf` automatically if missing.
+
+If certs exist only in Docker volumes and sites still work, do **not** panic — sync is skipped until host certs exist. Then run `renew-certificates.sh` again after successful issuance.
 
 ## Renewal
 

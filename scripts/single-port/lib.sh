@@ -108,20 +108,30 @@ patch_hmdm_compose() {
 }
 
 sync_remote_certs_from_le() {
+  if [[ ! -d "/etc/letsencrypt/live/${REMOTE_DOMAIN}" ]]; then
+    log "WARNING: No host cert for ${REMOTE_DOMAIN} — Remote Docker volume left unchanged"
+    return 0
+  fi
   mkdir -p "$REMOTE_DIR/deploy/dist/ssl"
-  rsync -a --delete /etc/letsencrypt/ "$REMOTE_DIR/deploy/dist/ssl/"
+  rsync -a /etc/letsencrypt/ "$REMOTE_DIR/deploy/dist/ssl/"
   if [[ -d "$REMOTE_DIR" ]]; then
     (cd "$REMOTE_DIR" && docker compose exec -T nginx nginx -s reload 2>/dev/null) || \
       (cd "$REMOTE_DIR" && docker compose restart nginx 2>/dev/null) || true
   fi
+  log "Synced host certs -> ${REMOTE_DIR}/deploy/dist/ssl/"
 }
 
 sync_mdm_certs_from_le() {
+  if [[ ! -d "/etc/letsencrypt/live/${MDM_DOMAIN}" ]]; then
+    log "WARNING: No host cert for ${MDM_DOMAIN} — MDM Docker volume left unchanged"
+    return 0
+  fi
   mkdir -p "$HMDM_LETSENCRYPT_DIR"
-  rsync -a --delete /etc/letsencrypt/ "$HMDM_LETSENCRYPT_DIR/"
+  rsync -a /etc/letsencrypt/ "$HMDM_LETSENCRYPT_DIR/"
   if [[ -d "$HMDM_DOCKER_DIR" ]]; then
     (cd "$HMDM_DOCKER_DIR" && docker compose restart hmdm 2>/dev/null) || true
   fi
+  log "Synced host certs -> ${HMDM_LETSENCRYPT_DIR}/"
 }
 
 issue_or_renew_cert() {
@@ -139,9 +149,45 @@ issue_or_renew_cert() {
     --agree-tos --non-interactive --no-eff-email
 }
 
+ensure_acme_nginx() {
+  local script_dir="$1"
+  local acme_conf="/etc/nginx/sites-enabled/headwind-acme.conf"
+
+  mkdir -p "$REMOTE_ACME_WEBROOT/.well-known/acme-challenge"
+  mkdir -p "$MDM_ACME_WEBROOT/.well-known/acme-challenge"
+
+  if [[ -f "$acme_conf" ]]; then
+    return 0
+  fi
+
+  log "Installing host nginx ACME config (port 80) ..."
+  mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+  render_template "$script_dir/templates/acme-http.conf.template" \
+    /etc/nginx/sites-available/headwind-acme.conf
+  ln -sf /etc/nginx/sites-available/headwind-acme.conf "$acme_conf"
+  nginx -t
+}
+
+ensure_host_certificates() {
+  issue_or_renew_cert "$REMOTE_DOMAIN" "$REMOTE_ACME_WEBROOT"
+  issue_or_renew_cert "$MDM_DOMAIN" "$MDM_ACME_WEBROOT"
+}
+
 renew_all_certs() {
   log "Running certbot renew ..."
   certbot renew --quiet --no-random-sleep-on-renew
+}
+
+log_cert_status() {
+  log "Host certificates:"
+  certbot certificates 2>/dev/null | sed 's/^/[single-port]   /' || true
+  for domain in "$REMOTE_DOMAIN" "$MDM_DOMAIN"; do
+    if [[ -d "/etc/letsencrypt/live/${domain}" ]]; then
+      log "  OK  ${domain}"
+    else
+      log "  MISSING  ${domain} — run setup-single-port.sh or fix port-80 ACME"
+    fi
+  done
 }
 
 install_cron() {
