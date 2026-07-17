@@ -22,10 +22,12 @@ nat: true
 public_ip: "YOUR.PUBLIC.IP"
 ```
 
-If MDM already uses port 443 on the same host, set a custom HTTPS port:
+If MDM already uses port 443 on the same host, set a custom HTTPS port and keep
+Remote's HTTP redirect off the public `:80` (host nginx owns ACME):
 
 ```yaml
 web_https_port: 9443
+web_http_listen: "127.0.0.1:8080"
 ```
 
 Open firewall ports:

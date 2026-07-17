@@ -8,10 +8,14 @@ events {
 http {
 {% if ssl_enabled %}
     server {
-        listen {{ web_http_port}};
+{% if web_http_listen | default('') | length %}
+        listen {{ web_http_listen }};
+{% else %}
+        listen {{ web_http_port }};
 # IPv6 is not used so comment it by now
 # This will prevent faults on hosts where IPv6 is not available
 #        listen [::]:{{ web_http_port }};
+{% endif %}
         server_name .{{ hostname }};
 
         # LetsEncrypt ACME challenge path

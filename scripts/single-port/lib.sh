@@ -87,6 +87,15 @@ free_port_80_for_host_nginx() {
         -e 's/listen \[::\]:80;/listen 127.0.0.1:8080;/' \
         "$remote_nginx_conf" || true
     fi
+    # Persist so the next install.sh / Ansible render does not reclaim :80
+    local remote_cfg="$REMOTE_DIR/config.yaml"
+    if [[ -f "$remote_cfg" ]]; then
+      if grep -qE '^[[:space:]]*web_http_listen:' "$remote_cfg"; then
+        sed -i 's|^[[:space:]]*web_http_listen:.*|web_http_listen: "127.0.0.1:8080"|' "$remote_cfg"
+      else
+        printf '\nweb_http_listen: "127.0.0.1:8080"\n' >> "$remote_cfg"
+      fi
+    fi
     (cd "$REMOTE_DIR" && docker compose up -d nginx janus 2>/dev/null) || true
   fi
 }
