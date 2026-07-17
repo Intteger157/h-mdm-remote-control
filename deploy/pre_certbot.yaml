@@ -10,6 +10,8 @@
   vars:
     compose_project_src: "{{ playbook_dir }}/.."
     compose_file: "{{ playbook_dir }}/../docker-compose.yaml"
+    # Live cert path used by nginx (bind-mounted from deploy/dist/ssl)
+    existing_fullchain: "{{ playbook_dir }}/dist/ssl/live/{{ hostname }}/fullchain.pem"
 
   tasks:
     - name: Prepare Python 3
@@ -18,11 +20,21 @@
     - name: Check settings
       ansible.builtin.import_tasks: tasks_check_settings.yaml
 
+    - name: Check whether a certificate already exists
+      ansible.builtin.stat:
+        path: "{{ existing_fullchain }}"
+      register: existing_cert
+
     - name: Ensure Headwind Remote is not running
       community.docker.docker_compose_v2:
         project_src: "{{ compose_project_src }}"
         state: absent
         remove_volumes: true
+
+    - name: Skip ACME — certificate already present
+      ansible.builtin.debug:
+        msg: "Using existing certificate at {{ existing_fullchain }}; skipping ACME issuance."
+      when: existing_cert.stat.exists
 
     - name: Process Nginx configuration for ACME challenge
       ansible.builtin.template:
@@ -30,6 +42,7 @@
         dest: "./dist/conf/nginx/{{ item | basename | regex_replace('\\.j2$', '') }}"
       with_fileglob:
         - ./templates/nginx-acme/*.j2
+      when: not existing_cert.stat.exists
 
     - name: Start Nginx for ACME challenge
       community.docker.docker_compose_v2:
@@ -37,7 +50,13 @@
         services:
           - nginx
         state: present
+      when: not existing_cert.stat.exists
 
+    # Modern certbot images ship CMD=["--preconfigured-renewal"]. If we override
+    # --entrypoint with the full "certbot certonly ..." string, Docker still
+    # appends that CMD and certbot fails with:
+    #   unrecognized arguments: --preconfigured-renewal=True
+    # Fix: set entrypoint to "certbot" and pass certonly args as the command.
     - name: Run certbot
       ansible.builtin.shell: |
         set -euo pipefail
@@ -45,19 +64,24 @@
           "true") eff_arg="--eff-email" ;;
           "false") eff_arg="--no-eff-email" ;;
         esac
-        docker compose -f "{{ compose_file }}" run --rm --entrypoint "\
-          certbot certonly -n --webroot -w /var/www/certbot \
-            --email {{ email }} \
-            $eff_arg \
-            -d {{ hostname }} \
+        docker compose -f "{{ compose_file }}" run --rm --no-deps \
+          --entrypoint certbot \
+          certbot \
+          certonly -n --webroot -w /var/www/certbot \
+            --email "{{ email }}" \
+            ${eff_arg} \
+            -d "{{ hostname }}" \
             --rsa-key-size 4096 \
-            --agree-tos" certbot
+            --agree-tos \
+            --keep-until-expiring
       args:
         chdir: "{{ playbook_dir }}"
         executable: /bin/bash
+      when: not existing_cert.stat.exists
 
-    - name: Stop services
+    - name: Stop ACME services
       community.docker.docker_compose_v2:
         project_src: "{{ compose_project_src }}"
         state: absent
         remove_volumes: true
+      when: not existing_cert.stat.exists
