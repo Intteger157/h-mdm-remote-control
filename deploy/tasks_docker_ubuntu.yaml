@@ -27,8 +27,13 @@
           - curl
           - gnupg
           - software-properties-common
-        update_cache: yes
+        update_cache: true
+        cache_valid_time: 3600
         state: present
+      register: docker_ssl_apt_install
+      retries: 5
+      delay: 15
+      until: docker_ssl_apt_install is succeeded
 
     - name: Check if Docker CLI is available
       ansible.builtin.command: docker --version

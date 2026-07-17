@@ -23,13 +23,18 @@
     ansible.builtin.import_tasks: tasks_python.yaml
 
   - name: Install required system packages
-    ansible.builtin.package:
+    ansible.builtin.apt:
       name:
         - git
         - ca-certificates
         - curl
-      update_cache: yes
-      state: latest
+      update_cache: true
+      cache_valid_time: 3600
+      state: present
+    register: system_apt_install
+    retries: 5
+    delay: 15
+    until: system_apt_install is succeeded
 
   - name: Install Python dependencies from apt
     ansible.builtin.apt:
@@ -37,6 +42,12 @@
         - python3-docker
         - python3-dnspython
       state: present
+      update_cache: true
+      cache_valid_time: 3600
+    register: python_deps_apt_install
+    retries: 5
+    delay: 15
+    until: python_deps_apt_install is succeeded
 
   - name: Install Docker on Ubuntu/Debian
     ansible.builtin.import_tasks: tasks_docker_ubuntu.yaml

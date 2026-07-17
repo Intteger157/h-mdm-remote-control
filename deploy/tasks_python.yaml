@@ -6,7 +6,13 @@
       - python3-setuptools
       - python3-pip
     state: present
-    update_cache: yes
+    update_cache: true
+    # Reuse a recent cache so transient mirror blips do not fail every install.sh run.
+    cache_valid_time: 3600
+  register: python3_apt_install
+  retries: 5
+  delay: 15
+  until: python3_apt_install is succeeded
 
 - name: Process Python 2 for backward compatibility
   block:
