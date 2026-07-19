@@ -190,6 +190,7 @@ patch_hmdm_compose() {
 patch_mdm_proxy_context() {
   local ctx=""
   local candidate
+  local container=""
 
   for candidate in \
     "$HMDM_DOCKER_DIR/volumes/tomcat/conf/context.xml" \
@@ -206,23 +207,49 @@ patch_mdm_proxy_context() {
     ctx="$(find "$HMDM_DOCKER_DIR" -name 'context.xml' 2>/dev/null | head -n1 || true)"
   fi
 
-  if [[ -z "$ctx" || ! -f "$ctx" ]]; then
-    log "WARNING: MDM context.xml not found on host — set inside the container and restart hmdm:"
-    log "  <Parameter name=\"proxy.addresses\" value=\"127.0.0.1\"/>"
-    log "  <Parameter name=\"proxy.ip.header\" value=\"X-Real-IP\"/>"
+  if [[ -n "$ctx" && -f "$ctx" ]]; then
+    cp -a "$ctx" "${ctx}.bak.haproxy-$(date +%Y%m%d%H%M%S)"
+    sed -i '/proxy\.addresses/d;/proxy\.ip\.header/d' "$ctx"
+    if grep -q '</Context>' "$ctx"; then
+      sed -i 's|</Context>|    <Parameter name="proxy.addresses" value="127.0.0.1"/>\n    <Parameter name="proxy.ip.header" value="X-Real-IP"/>\n</Context>|' "$ctx"
+      log "Patched MDM proxy headers in $ctx"
+    else
+      log "WARNING: no </Context> in $ctx — add proxy.addresses manually"
+    fi
     return 0
   fi
 
-  cp -a "$ctx" "${ctx}.bak.haproxy-$(date +%Y%m%d%H%M%S)"
-
-  # Drop old proxy.* lines (commented or not) then insert clean ones before </Context>
-  sed -i '/proxy\.addresses/d;/proxy\.ip\.header/d' "$ctx"
-  if grep -q '</Context>' "$ctx"; then
-    sed -i 's|</Context>|    <Parameter name="proxy.addresses" value="127.0.0.1"/>\n    <Parameter name="proxy.ip.header" value="X-Real-IP"/>\n</Context>|' "$ctx"
-    log "Patched MDM proxy headers in $ctx"
-  else
-    log "WARNING: no </Context> in $ctx — add proxy.addresses manually"
+  # Typical Headwind docker: context.xml only inside the container image/volume
+  if [[ -d "$HMDM_DOCKER_DIR" ]]; then
+    container="$(cd "$HMDM_DOCKER_DIR" && docker compose ps -q hmdm 2>/dev/null | head -n1 || true)"
   fi
+  if [[ -z "$container" ]]; then
+    log "WARNING: MDM context.xml not found and hmdm container not running"
+    return 0
+  fi
+
+  log "Patching proxy headers inside container $container:/usr/local/tomcat/conf/context.xml"
+  docker exec "$container" sh -c '
+    set -e
+    CTX=/usr/local/tomcat/conf/context.xml
+    test -f "$CTX"
+    cp -a "$CTX" "${CTX}.bak.haproxy"
+    # remove old proxy lines (commented or not)
+    sed -i "/proxy\\.addresses/d;/proxy\\.ip\\.header/d" "$CTX"
+    if grep -q "</Context>" "$CTX"; then
+      sed -i "s|</Context>|    <Parameter name=\"proxy.addresses\" value=\"127.0.0.1\"/>\n    <Parameter name=\"proxy.ip.header\" value=\"X-Real-IP\"/>\n</Context>|" "$CTX"
+    else
+      echo "No </Context> in $CTX" >&2
+      exit 1
+    fi
+    grep -n "proxy.addresses\|proxy.ip.header" "$CTX"
+  ' || {
+    log "WARNING: failed to patch context.xml in container — set manually and restart hmdm"
+    return 0
+  }
+
+  (cd "$HMDM_DOCKER_DIR" && docker compose restart hmdm) || true
+  log "MDM restarted after proxy.addresses patch"
 }
 
 sync_remote_certs_from_le() {
