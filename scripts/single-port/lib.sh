@@ -44,8 +44,48 @@ render_template() {
 # ---------------------------------------------------------------------------
 
 ensure_haproxy_packages() {
-  apt-get install -y haproxy certbot rsync openssl
+  apt-get install -y haproxy certbot rsync openssl python3
   systemctl enable haproxy
+}
+
+# Local static servers for certbot HTTP-01 (HAProxy cannot use dynamic file paths in http-request return).
+ensure_acme_static_servers() {
+  mkdir -p "$REMOTE_ACME_WEBROOT/.well-known/acme-challenge"
+  mkdir -p "$MDM_ACME_WEBROOT/.well-known/acme-challenge"
+
+  cat > /etc/systemd/system/headwind-acme-remote.service <<EOF
+[Unit]
+Description=Headwind ACME static webroot (Remote)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m http.server 9080 --bind 127.0.0.1 --directory ${REMOTE_ACME_WEBROOT}
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  cat > /etc/systemd/system/headwind-acme-mdm.service <<EOF
+[Unit]
+Description=Headwind ACME static webroot (MDM)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m http.server 9081 --bind 127.0.0.1 --directory ${MDM_ACME_WEBROOT}
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable --now headwind-acme-remote.service headwind-acme-mdm.service
+  log "ACME static servers on 127.0.0.1:9080 (remote) and :9081 (mdm)"
 }
 
 disable_host_nginx_edge() {
@@ -62,8 +102,8 @@ disable_host_nginx_edge() {
 install_haproxy_config() {
   local script_dir="$1"
   mkdir -p /etc/haproxy /etc/haproxy/certs
+  ensure_acme_static_servers
   render_template "$script_dir/templates/haproxy.cfg.template" /etc/haproxy/haproxy.cfg
-  # Keep a stamped copy for debugging
   cp -a /etc/haproxy/haproxy.cfg "/etc/haproxy/haproxy.cfg.headwind"
   log "Wrote /etc/haproxy/haproxy.cfg"
 }
