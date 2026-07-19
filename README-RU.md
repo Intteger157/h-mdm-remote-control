@@ -1,6 +1,8 @@
 # Headwind Remote
 
 > **Этот форк:** установка на Ubuntu 22.04 / 24.04, Docker Compose v2 и совместный хостинг с Headwind MDM на одном публичном `:443` через HAProxy. См. [INSTALL-UBUNTU.md](./INSTALL-UBUNTU.md) и [scripts/single-port/README.md](./scripts/single-port/README.md). Полная документация на английском: [README.md](./README.md).
+>
+> Кастомный MDM WAR (плагины remote / location / reboot-lock-reset): [Intteger157/hmdm-server](https://github.com/Intteger157/hmdm-server).
 
 ## Описание
 

@@ -124,7 +124,46 @@ You can open the remote control web app (web-admin) using the URL `https://remot
 
 ### Same VPS as Headwind MDM (single public 443)
 
-Use HAProxy on the host so MDM and Remote share `:443` while preserving the real client IP in MDM Devices:
+Recommended stack on one Ubuntu 22.04/24.04 VPS:
+
+| Role | Repo | Public name (example) | Backend |
+|------|------|------------------------|---------|
+| MDM panel + plugins | [Intteger157/hmdm-server](https://github.com/Intteger157/hmdm-server) | `mdm.example.com` | `127.0.0.1:8443` |
+| Remote (this repo) | [Intteger157/h-mdm-remote-control](https://github.com/Intteger157/h-mdm-remote-control) | `remote.example.com` | `127.0.0.1:9443` |
+| Edge | HAProxy (scripts below) | `:80` / `:443` | TLS terminate + Host routing |
+
+```
+Internet :80 / :443
+        │
+   HAProxy (TLS terminate, real client IP via X-Real-IP)
+        │
+        ├── Host: remote.* ──► https://127.0.0.1:9443
+        └── Host: mdm.*    ──► https://127.0.0.1:8443
+```
+
+#### A. Custom MDM WAR (plugins included)
+
+The MDM fork builds a WAR with `deviceremote`, `devicelocation`, `devicereset` (reboot / lock / factory reset), and other plugins. See the MDM README: [Build custom WAR](https://github.com/Intteger157/hmdm-server#build-custom-war).
+
+```bash
+git clone https://github.com/Intteger157/hmdm-server.git
+cd hmdm-server
+docker run --rm \
+  -v "$(pwd)":/usr/src/mymaven \
+  -v "$HOME/.m2":/root/.m2 \
+  -w /usr/src/mymaven \
+  maven:3.8.6-openjdk-11 \
+  mvn clean package -pl server -am -DskipTests
+# → server/target/launcher.war  →  deploy into hmdm-docker volumes/webapps/ROOT.war
+```
+
+Ensure MDM HTTPS is bound to **localhost** (e.g. `127.0.0.1:8443`), not public `:443`.
+
+#### B. Install Remote (this repo)
+
+Use `web_https_port: 9443` and `web_http_listen: "127.0.0.1:8080"` as above, then `sudo ./install.sh`.
+
+#### C. HAProxy edge
 
 ```bash
 cp scripts/single-port/config.env.example scripts/single-port/config.env
@@ -140,6 +179,15 @@ sudo scripts/single-port/migrate-nginx-to-haproxy.sh
 ```
 
 Details: [scripts/single-port/README.md](./scripts/single-port/README.md).
+
+#### D. Connect MDM → Remote
+
+In MDM: **Plugins → Remote control → Settings**
+
+- URL: `https://remote.example.com/web-admin/`
+- Secret: `cat deploy/dist/credentials/janus_api_secret`
+
+Also: [INSTALL-UBUNTU.md](./INSTALL-UBUNTU.md) · MDM fork overview: [hmdm-server README](https://github.com/Intteger157/hmdm-server#mdm--remote-on-one-server-haproxy)
 
 ## Usage
 

@@ -2,6 +2,9 @@
 
 Repository: https://github.com/Intteger157/h-mdm-remote-control
 
+Companion MDM (custom WAR + plugins): https://github.com/Intteger157/hmdm-server  
+Co-host guide (HAProxy): see [README.md](./README.md#same-vps-as-headwind-mdm-single-public-443) and [scripts/single-port/README.md](./scripts/single-port/README.md).
+
 This fork modernizes the Headwind Remote installer for **Ubuntu 22.04+** and **Debian 12+** while keeping legacy support for Ubuntu 16.04–21.04.
 
 ## Quick install (Ubuntu 24.04)
