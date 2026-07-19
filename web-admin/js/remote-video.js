@@ -122,6 +122,10 @@ function RemoteVideo(remoteVideoElem, videoLoader, videoStats) {
         }, 400);
     }
 
+    this.isWaitingForPaint = function () {
+        return this._waitingForPaint;
+    }
+
     this.noRemoteVideo = function () {
         this._stopFrameProbe();
         if (!this.isVideoAlreadyPlayed || window.debugUtils.isDebugEnabled()) {

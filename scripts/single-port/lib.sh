@@ -39,55 +39,80 @@ render_template() {
     "$template" > "$output"
 }
 
-ensure_nginx_stream_module() {
-  apt-get install -y nginx libnginx-mod-stream certbot
-  ln -sf /usr/share/nginx/modules-available/mod-stream.conf \
-    /etc/nginx/modules-enabled/50-mod-stream.conf
-  [[ -f /etc/nginx/modules-enabled/50-mod-stream.conf ]] || die "nginx stream module missing"
+# ---------------------------------------------------------------------------
+# Host edge: HAProxy (SSL terminate) replaces nginx stream SNI
+# ---------------------------------------------------------------------------
+
+ensure_haproxy_packages() {
+  apt-get install -y haproxy certbot rsync openssl
+  systemctl enable haproxy
 }
 
-ensure_nginx_includes() {
-  local nginx_conf="/etc/nginx/nginx.conf"
+disable_host_nginx_edge() {
+  log "Disabling host nginx edge (:80/:443) — HAProxy takes over ..."
+  systemctl stop nginx 2>/dev/null || true
+  systemctl disable nginx 2>/dev/null || true
 
-  if ! grep -q 'include /etc/nginx/modules-enabled/\*\.conf;' "$nginx_conf"; then
-    sed -i '1i include /etc/nginx/modules-enabled/*.conf;' "$nginx_conf"
-  fi
+  # Remove single-port nginx artifacts so a later nginx start cannot steal :443
+  rm -f /etc/nginx/stream.d/headwind-sni-443.conf \
+        /etc/nginx/stream.d/sni-443.conf \
+        /etc/nginx/sites-enabled/headwind-acme.conf 2>/dev/null || true
+}
 
-  if ! grep -q 'include /etc/nginx/stream.d/\*\.conf;' "$nginx_conf"; then
-    if grep -q '^stream {' "$nginx_conf"; then
-      die "stream {} already exists in nginx.conf — merge include manually"
+install_haproxy_config() {
+  local script_dir="$1"
+  mkdir -p /etc/haproxy /etc/haproxy/certs
+  render_template "$script_dir/templates/haproxy.cfg.template" /etc/haproxy/haproxy.cfg
+  # Keep a stamped copy for debugging
+  cp -a /etc/haproxy/haproxy.cfg "/etc/haproxy/haproxy.cfg.headwind"
+  log "Wrote /etc/haproxy/haproxy.cfg"
+}
+
+# Build PEM bundles (fullchain+privkey) that HAProxy SNI can load from a directory.
+sync_haproxy_certs() {
+  mkdir -p /etc/haproxy/certs
+  local domain pem
+  for domain in "$REMOTE_DOMAIN" "$MDM_DOMAIN"; do
+    if [[ ! -f "/etc/letsencrypt/live/${domain}/fullchain.pem" ]]; then
+      log "WARNING: missing LE cert for ${domain} — skip HAProxy bundle"
+      continue
     fi
-    awk '
-      /^http \{/ && !done {
-        print "stream {"
-        print "    include /etc/nginx/stream.d/*.conf;"
-        print "}"
-        print ""
-        done=1
-      }
-      { print }
-    ' "$nginx_conf" > "${nginx_conf}.tmp"
-    mv "${nginx_conf}.tmp" "$nginx_conf"
-  fi
-
-  if ! grep -q 'include /etc/nginx/sites-enabled/\*;' "$nginx_conf"; then
-    log "nginx sites-enabled include already standard or custom layout"
-  fi
+    pem="/etc/haproxy/certs/${domain}.pem"
+    cat "/etc/letsencrypt/live/${domain}/fullchain.pem" \
+        "/etc/letsencrypt/live/${domain}/privkey.pem" > "$pem"
+    chmod 600 "$pem"
+    log "HAProxy cert bundle: $pem"
+  done
 }
 
-free_port_80_for_host_nginx() {
+reload_haproxy() {
+  if ! haproxy -c -f /etc/haproxy/haproxy.cfg; then
+    die "haproxy.cfg failed validation"
+  fi
+  systemctl reload haproxy 2>/dev/null || systemctl restart haproxy
+  log "HAProxy reloaded"
+}
+
+# ---------------------------------------------------------------------------
+# Backends stay on localhost HTTPS; free public :80 from Remote docker
+# ---------------------------------------------------------------------------
+
+free_port_80_for_host_edge() {
   log "Stopping Remote docker nginx/certbot on host :80 ..."
   if [[ -d "$REMOTE_DIR" ]]; then
     (cd "$REMOTE_DIR" && docker compose stop certbot nginx 2>/dev/null) || true
     local remote_nginx_conf="$REMOTE_DIR/deploy/dist/conf/nginx/nginx.conf"
     if [[ -f "$remote_nginx_conf" ]]; then
       sed -i \
-        -e "s/listen ${REMOTE_HTTPS_PORT} ssl http2;/listen ${REMOTE_HTTPS_PORT} ssl http2;/" \
         -e 's/listen 80;/listen 127.0.0.1:8080;/' \
         -e 's/listen \[::\]:80;/listen 127.0.0.1:8080;/' \
         "$remote_nginx_conf" || true
+      # Real client IP from HAProxy (scheme 2)
+      if ! grep -q 'real_ip_header X-Real-IP' "$remote_nginx_conf"; then
+        sed -i '/http {/a\    set_real_ip_from 127.0.0.1;\n    real_ip_header X-Real-IP;\n    real_ip_recursive on;' \
+          "$remote_nginx_conf" || true
+      fi
     fi
-    # Persist so the next install.sh / Ansible render does not reclaim :80
     local remote_cfg="$REMOTE_DIR/config.yaml"
     if [[ -f "$remote_cfg" ]]; then
       if grep -qE '^[[:space:]]*web_http_listen:' "$remote_cfg"; then
@@ -100,6 +125,9 @@ free_port_80_for_host_nginx() {
   fi
 }
 
+# Back-compat alias used by older renew scripts / docs
+free_port_80_for_host_nginx() { free_port_80_for_host_edge; }
+
 patch_hmdm_compose() {
   local compose="$HMDM_DOCKER_DIR/docker-compose.yaml"
   [[ -f "$compose" ]] || die "MDM compose not found: $compose"
@@ -109,11 +137,52 @@ patch_hmdm_compose() {
   sed -i \
     -e 's#- "443:8443"#- "127.0.0.1:8443:8443"#g' \
     -e 's#- "443:8443/tcp"#- "127.0.0.1:8443:8443"#g' \
+    -e 's#- "0.0.0.0:8443:8443"#- "127.0.0.1:8443:8443"#g' \
+    -e 's#- "8443:8443"#- "127.0.0.1:8443:8443"#g' \
     -e 's#- "80:80"#- "127.0.0.1:8081:80"#g' \
     "$compose"
 
-  log "Patched MDM compose (443 -> 127.0.0.1:8443, certbot 80 -> 127.0.0.1:8081)"
+  log "Patched MDM compose (public ports -> 127.0.0.1:8443 / :8081)"
   log "Restart MDM: cd $HMDM_DOCKER_DIR && docker compose up -d postgresql hmdm"
+}
+
+# Tell Headwind Tomcat to trust HAProxy and read X-Real-IP
+patch_mdm_proxy_context() {
+  local ctx=""
+  local candidate
+
+  for candidate in \
+    "$HMDM_DOCKER_DIR/volumes/tomcat/conf/context.xml" \
+    "$HMDM_DOCKER_DIR/tomcat/conf/context.xml" \
+    "$HMDM_DOCKER_DIR/conf/context.xml" \
+    "$HMDM_DOCKER_DIR/context.xml"; do
+    if [[ -f "$candidate" ]]; then
+      ctx="$candidate"
+      break
+    fi
+  done
+
+  if [[ -z "$ctx" ]]; then
+    ctx="$(find "$HMDM_DOCKER_DIR" -name 'context.xml' 2>/dev/null | head -n1 || true)"
+  fi
+
+  if [[ -z "$ctx" || ! -f "$ctx" ]]; then
+    log "WARNING: MDM context.xml not found on host — set inside the container and restart hmdm:"
+    log "  <Parameter name=\"proxy.addresses\" value=\"127.0.0.1\"/>"
+    log "  <Parameter name=\"proxy.ip.header\" value=\"X-Real-IP\"/>"
+    return 0
+  fi
+
+  cp -a "$ctx" "${ctx}.bak.haproxy-$(date +%Y%m%d%H%M%S)"
+
+  # Drop old proxy.* lines (commented or not) then insert clean ones before </Context>
+  sed -i '/proxy\.addresses/d;/proxy\.ip\.header/d' "$ctx"
+  if grep -q '</Context>' "$ctx"; then
+    sed -i 's|</Context>|    <Parameter name="proxy.addresses" value="127.0.0.1"/>\n    <Parameter name="proxy.ip.header" value="X-Real-IP"/>\n</Context>|' "$ctx"
+    log "Patched MDM proxy headers in $ctx"
+  else
+    log "WARNING: no </Context> in $ctx — add proxy.addresses manually"
+  fi
 }
 
 sync_remote_certs_from_le() {
@@ -136,7 +205,6 @@ sync_mdm_certs_from_le() {
     return 0
   fi
   mkdir -p "$HMDM_LETSENCRYPT_DIR"
-  # -L: copy cert files, not symlinks (Tomcat/openssl inside Docker need real files)
   rsync -aL /etc/letsencrypt/ "$HMDM_LETSENCRYPT_DIR/"
   if [[ -d "$HMDM_DOCKER_DIR" ]]; then
     reload_mdm_tomcat_ssl
@@ -218,7 +286,6 @@ verify_mdm_https_backend() {
   done
   log "WARNING: MDM not responding on HTTPS :${MDM_HTTPS_PORT} — run:"
   log "  cd ${HMDM_DOCKER_DIR} && docker compose logs hmdm --tail=80"
-  log "  docker exec \$(docker compose -f ${HMDM_DOCKER_DIR}/docker-compose.yaml ps -q hmdm) ls -la /etc/letsencrypt/live/${MDM_DOMAIN}/"
   return 1
 }
 
@@ -264,23 +331,14 @@ ensure_mdm_rsa_cert() {
   fi
 }
 
+# Legacy name kept for renew-certificates.sh callers
 ensure_acme_nginx() {
   local script_dir="$1"
-  local acme_conf="/etc/nginx/sites-enabled/headwind-acme.conf"
-
   mkdir -p "$REMOTE_ACME_WEBROOT/.well-known/acme-challenge"
   mkdir -p "$MDM_ACME_WEBROOT/.well-known/acme-challenge"
-
-  if [[ -f "$acme_conf" ]]; then
-    return 0
-  fi
-
-  log "Installing host nginx ACME config (port 80) ..."
-  mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-  render_template "$script_dir/templates/acme-http.conf.template" \
-    /etc/nginx/sites-available/headwind-acme.conf
-  ln -sf /etc/nginx/sites-available/headwind-acme.conf "$acme_conf"
-  nginx -t
+  install_haproxy_config "$script_dir"
+  sync_haproxy_certs
+  reload_haproxy
 }
 
 ensure_host_certificates() {

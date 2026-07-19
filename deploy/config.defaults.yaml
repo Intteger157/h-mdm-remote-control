@@ -22,8 +22,7 @@ is_nginx_enabled: true
 web_http_port: 80
 web_https_port: 443
 # Optional full listen address for the HTTP redirect/ACME server block.
-# Use "127.0.0.1:8080" when host nginx owns :80 (single-port / SNI setup).
-# Empty = listen on web_http_port (all interfaces).
+# Use "127.0.0.1:8080" when host HAProxy/nginx owns :80 (single-port setup).
 web_http_listen: ""
 
 ## RTP

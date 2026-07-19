@@ -193,6 +193,14 @@ $(document).ready(function () {
                         },
 
                         slowLink: function(uplink, lost){
+                            // Janus often fires slowLink while ColorOS has not emitted the first
+                            // IDR yet (white/blank video). Gestures still work — do not scare admins.
+                            if (remoteVideo && typeof remoteVideo.isWaitingForPaint === 'function'
+                                    && remoteVideo.isWaitingForPaint()) {
+                                console.debug('streaming: slowLink suppressed while waiting for first frame',
+                                    uplink, lost);
+                                return;
+                            }
                             ui.showWarning(`Network problems`, 'Screen sharing', null, null, 2000);
                         },
 

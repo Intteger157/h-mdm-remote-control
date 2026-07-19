@@ -23,7 +23,7 @@ public_ip: "YOUR.PUBLIC.IP"
 ```
 
 If MDM already uses port 443 on the same host, set a custom HTTPS port and keep
-Remote's HTTP redirect off the public `:80` (host nginx owns ACME):
+Remote's HTTP redirect off the public `:80` (host HAProxy owns ACME):
 
 ```yaml
 web_https_port: 9443
@@ -54,7 +54,7 @@ Web UI: `https://remote.example.com/web-admin/` (include `:9443` if configured).
 
 ## Same VPS as Headwind MDM (single port 443)
 
-If MDM already uses host port **443**, use the automated script:
+If MDM already uses host port **443**, use HAProxy SSL-terminate (real client IP in Devices):
 
 ```bash
 cp scripts/single-port/config.env.example scripts/single-port/config.env
@@ -63,9 +63,15 @@ chmod +x scripts/single-port/*.sh
 sudo scripts/single-port/setup-single-port.sh
 ```
 
-See **[scripts/single-port/README.md](../scripts/single-port/README.md)** — SNI on `:443`, unified **certbot** on `:80`, weekly renewal cron.
+Already on nginx stream? Migrate:
 
-Manual steps (legacy): **[deploy/host-nginx/README.md](./deploy/host-nginx/README.md)**
+```bash
+sudo scripts/single-port/migrate-nginx-to-haproxy.sh
+```
+
+See **[scripts/single-port/README.md](scripts/single-port/README.md)** — HAProxy on `:443` + certbot on `:80`.
+
+Legacy nginx stream notes: **[deploy/host-nginx/README.md](deploy/host-nginx/README.md)** (deprecated).
 
 ## MDM integration (`deviceremote` plugin)
 

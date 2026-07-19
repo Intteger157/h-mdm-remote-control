@@ -84,3 +84,11 @@ if [[ -f ./deploy/dist/credentials/janus_api_secret ]]; then
   echo "API Secret: ${janus_api_secret}"
   echo "Secret file: ./deploy/dist/credentials/janus_api_secret"
 fi
+
+echo ""
+echo "Same VPS as Headwind MDM (single public :443)?"
+echo "  Use HAProxy edge (real client IP in Devices list):"
+echo "  cp scripts/single-port/config.env.example scripts/single-port/config.env"
+echo "  sudo scripts/single-port/setup-single-port.sh"
+echo "  Migrating from nginx stream: sudo scripts/single-port/migrate-nginx-to-haproxy.sh"
+echo "  Docs: scripts/single-port/README.md"
