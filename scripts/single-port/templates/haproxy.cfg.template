@@ -36,9 +36,10 @@ frontend fe_http
     acl host_remote hdr(host) -i __REMOTE_DOMAIN__
     acl host_mdm    hdr(host) -i __MDM_DOMAIN__
 
-    # Serve challenge tokens from host webroots (certbot --webroot)
-    http-request return status 200 content-type "text/plain" file __REMOTE_ACME_WEBROOT__%[path] if is_acme host_remote
-    http-request return status 200 content-type "text/plain" file __MDM_ACME_WEBROOT__%[path] if is_acme host_mdm
+    # Serve challenge tokens from host webroots (certbot --webroot).
+    # Must use lf-file (runtime path); plain "file" is checked at parse time and breaks.
+    http-request return status 200 content-type "text/plain" lf-file __REMOTE_ACME_WEBROOT__%[path] if is_acme host_remote
+    http-request return status 200 content-type "text/plain" lf-file __MDM_ACME_WEBROOT__%[path] if is_acme host_mdm
 
     http-request redirect scheme https code 301 unless is_acme
 
