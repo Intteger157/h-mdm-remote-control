@@ -1,6 +1,6 @@
 # Ubuntu 22.04 / 24.04 install notes
 
-Fork: https://github.com/Intteger157/h-mdm-remote-control
+Repository: https://github.com/Intteger157/h-mdm-remote-control
 
 This fork modernizes the Headwind Remote installer for **Ubuntu 22.04+** and **Debian 12+** while keeping legacy support for Ubuntu 16.04–21.04.
 

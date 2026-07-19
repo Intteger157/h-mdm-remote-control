@@ -1,6 +1,6 @@
 # Headwind Remote - the open source remote control software for Android
 
-> **This fork:** Ubuntu 22.04 / 24.04 installer updates. See [INSTALL-UBUNTU.md](./INSTALL-UBUNTU.md) for deployment with Headwind MDM `deviceremote` plugin.
+> **This fork:** Ubuntu 22.04 / 24.04 installer updates, Docker Compose v2, and co-hosting with Headwind MDM on a single public `:443` via HAProxy. See [INSTALL-UBUNTU.md](./INSTALL-UBUNTU.md) and [scripts/single-port/README.md](./scripts/single-port/README.md).
 
 ## Summary
 
@@ -9,11 +9,21 @@ Headwind Remote is the open source engine providing remote access to Android-bas
 The software consists of:
 
 - [Janus](https://janus.conf.meetecho.com/). Media server for screen sharing and gesture delivery
-- [nginx](https://nginx.org/). Web server for hosting the web application
+- [nginx](https://nginx.org/). Web server for hosting the web application (Docker)
 - [certbot](https://certbot.eff.org/). Agent managing SSL certificates issued by [LetsEncrypt](https://letsencrypt.org/)
+- [HAProxy](https://www.haproxy.org/) (optional). Single-port TLS edge when MDM and Remote share one VPS
 - web-admin. Web application for the remote control of mobile devices
 
 This project is the server module. The source code of the mobile agent is available at https://github.com/h-mdm/remote-control-android and also on [Google Play](https://play.google.com/store/apps/details?id=com.hmdm.control).
+
+### What's new in this fork
+
+- Modern installer path for **Ubuntu 22.04 / 24.04** and **Debian 12+** (Ansible from apt + Docker Compose v2)
+- `web_https_port` / `web_http_listen` so Remote can run behind a host reverse proxy
+- **HAProxy SSL terminate** for MDM + Remote on one public `:443` with real client IPs (`X-Real-IP`)
+- Unified Let's Encrypt renewal (HTTP-01 on `:80`) and PEM sync for HAProxy / Docker volumes
+- Migration helper from legacy nginx stream SNI → HAProxy
+- web-admin tweaks for more reliable first-frame / slow-link UX during screen sharing
 
 ### Platform requirements
 
@@ -27,10 +37,10 @@ Minimal software requirements:
 
 Other requirements:
 
-- CPU architecture `x84_64` / `amd64`
+- CPU architecture `x86_64` / `amd64`
 - Linux, available options are:
-    - Ubuntu Noble `24.04 LTS` (this fork)
-    - Ubuntu Jammy `22.04 LTS` (this fork)
+    - Ubuntu Noble `24.04 LTS` (recommended in this fork)
+    - Ubuntu Jammy `22.04 LTS` (recommended in this fork)
     - Ubuntu Focal `20.04 LTS`
 	- Ubuntu Bionic `18.04 LTS` 
 	- Ubuntu Xenial `16.04 LTS`
@@ -39,6 +49,8 @@ Other requirements:
 
 The software has been tested on the DigitalOcean hosting (minimal $5 Droplet). The following Linux versions have been tested:
 
+- Ubuntu Noble 24.04 LTS x64
+- Ubuntu Jammy 22.04 LTS x64
 - Ubuntu Focal 20.04 LTS x64
 - Ubuntu Bionic 18.04.3 LTS x64
 - Ubuntu Xenial 16.04.6 LTS x64
@@ -79,19 +91,28 @@ Upstream (private): https://github.com/h-mdm/remote-control
 
 Notice: to get the source code of the premium version, contact the sales at https://headwind-remote.com.
 
+For a short Ubuntu 22.04/24.04 + MDM co-hosting guide, see [INSTALL-UBUNTU.md](./INSTALL-UBUNTU.md).
+
 #### Before the installation
 
 Change the directory to the project directory:
 
-    cd remote-control
+    cd h-mdm-remote-control
 
 Edit the file `config.yaml` and setup the domain name where Headwind Remote will be installed and the administrator's email: 
 
     ---
-    hostname: "hremote.my-company.org"
-    email: "administrator@my-company.org"
+    hostname: "remote.example.com"
+    email: "admin@example.com"
 
 _Important: Headwind Remote is designed to work on the dedicated domain. You can use either a domain like `yourdomain.com` or a subdomain of any level. During the installation, the software checks the existence of the domain name entered in `config.yaml` and verifies its ownership (otherwise the setup is aborted). Therefore, you need to create and setup a (sub)domain so it is resolved to an external IP address of your server._
+
+If Headwind MDM already owns public `:443` on the same host:
+
+```yaml
+web_https_port: 9443
+web_http_listen: "127.0.0.1:8080"
+```
 
 #### Installation
 
@@ -99,7 +120,26 @@ _Important: Headwind Remote is designed to work on the dedicated domain. You can
 
 After the successful run of this command, Headwind Remote will be configured, installed and started.
 
-You can open the remote control web app (web-admin) using the URL `hremote.my-company.org/web-admin/`
+You can open the remote control web app (web-admin) using the URL `https://remote.example.com/web-admin/` (add `:9443` if you set a custom HTTPS port).
+
+### Same VPS as Headwind MDM (single public 443)
+
+Use HAProxy on the host so MDM and Remote share `:443` while preserving the real client IP in MDM Devices:
+
+```bash
+cp scripts/single-port/config.env.example scripts/single-port/config.env
+nano scripts/single-port/config.env
+chmod +x scripts/single-port/*.sh
+sudo scripts/single-port/setup-single-port.sh
+```
+
+Already on nginx stream SNI? Migrate:
+
+```bash
+sudo scripts/single-port/migrate-nginx-to-haproxy.sh
+```
+
+Details: [scripts/single-port/README.md](./scripts/single-port/README.md).
 
 ## Usage
 
@@ -146,7 +186,7 @@ In the Premium version, you can use any HTTPS certificate. Please fill in the co
 
 In most cases, Headwind Remote can be updated by renewing the source codes and running `./install.sh`.
 
-    cd remote-control
+    cd h-mdm-remote-control
     git pull
     sudo ./install.sh
 
@@ -263,7 +303,7 @@ To implement this option, turn off certbot and nginx in `config.yaml`:
 
 Before executing commands, change the directory to the one where Headwind Remote is installed:
 
-    cd ~/remote-control
+    cd ~/h-mdm-remote-control
 
 The system is based on `docker-compose`, therefore you need to use docker-compose commands to start, restart, stop, and other Headwind Remote management actions.
 

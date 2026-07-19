@@ -46,7 +46,7 @@ case ${distro_name} in
     echo "OK, installing modern Ansible stack on ${distro_name} ${distro_version} .."
     ansible_install_modern
   else
-    echo "ERROR: This installer requires Ubuntu 22.04 or newer."
+    echo "ERROR: This fork requires Ubuntu 22.04 or newer."
     echo "For Ubuntu 20.04 and older, use upstream commit 212335a with Ansible 2.9."
     exit 1
   fi
@@ -58,7 +58,7 @@ case ${distro_name} in
     echo "OK, installing modern Ansible stack on ${distro_name} ${distro_version} .."
     ansible_install_modern
   else
-    echo "ERROR: This installer requires Debian 12 or newer."
+    echo "ERROR: This fork requires Debian 12 or newer."
     echo "For older Debian releases, use upstream commit 212335a with Ansible 2.9."
     exit 1
   fi
